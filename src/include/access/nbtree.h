@@ -98,9 +98,7 @@ typedef struct BTMetaPageData
 	uint32		btm_magic;		/* should contain BTREE_MAGIC */
 	uint32		btm_version;	/* should contain BTREE_VERSION */
 	BlockNumber btm_root;		/* current root location */
-	uint32		btm_level;		/* tree level of the root page */
-	BlockNumber btm_fastroot;	/* current "fast" root location */
-	uint32		btm_fastlevel;	/* tree level of the "fast" root page */
+    BlockNumber btm_next_free;
 } BTMetaPageData;
 
 #define BTPageGetMeta(p) \
@@ -108,7 +106,15 @@ typedef struct BTMetaPageData
 
 #define BTREE_METAPAGE	0		/* first page is meta */
 #define BTREE_MAGIC		0x053162	/* magic number of btree pages */
-#define BTREE_VERSION	2		/* current version number */
+#define BTREE_VERSION	3		/* current version number */
+#define SKIPLIST_HEIGHT 12
+
+typedef struct SkiplistNode
+{
+    ItemPointerData next[SKIPLIST_HEIGHT];
+    ItemPointerData thisLocation;
+    IndexTupleData data;
+} SkiplistNode;
 
 /*
  * Maximum size of a btree index entry, including its tuple header.
@@ -538,6 +544,10 @@ extern bytea *btoptions(Datum reloptions, bool validate);
 extern bool btproperty(Oid index_oid, int attno,
 		   IndexAMProperty prop, const char *propname,
 		   bool *res, bool *isnull);
+
+/*
+ * prototypes for functions in skiplistnode.c
+ */
 
 /*
  * prototypes for functions in nbtvalidate.c

@@ -57,9 +57,7 @@ _bt_initmetapage(Page page, BlockNumber rootbknum, uint32 level)
 	metad->btm_magic = BTREE_MAGIC;
 	metad->btm_version = BTREE_VERSION;
 	metad->btm_root = rootbknum;
-	metad->btm_level = level;
-	metad->btm_fastroot = rootbknum;
-	metad->btm_fastlevel = level;
+    metad->btm_next_free = rootbknum;
 
 	metaopaque = (BTPageOpaque) PageGetSpecialPointer(page);
 	metaopaque->btpo_flags = BTP_META;
@@ -125,10 +123,6 @@ _bt_getroot(Relation rel, int access)
 		Assert(metad->btm_magic == BTREE_MAGIC);
 		Assert(metad->btm_version == BTREE_VERSION);
 		Assert(metad->btm_root != P_NONE);
-
-		rootblkno = metad->btm_fastroot;
-		Assert(rootblkno != P_NONE);
-		rootlevel = metad->btm_fastlevel;
 
 		rootbuf = _bt_getbuf(rel, rootblkno, BT_READ);
 		rootpage = BufferGetPage(rootbuf);
