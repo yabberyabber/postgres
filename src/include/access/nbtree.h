@@ -86,6 +86,13 @@ typedef BTPageOpaqueData *BTPageOpaque;
 #define MAX_BT_CYCLE_ID		0xFF7F
 
 
+typedef struct SkiplistNode
+{
+    ItemPointerData next[SKIPLIST_HEIGHT];
+    ItemPointerData thisLocation;
+    IndexTupleData data;
+} SkiplistNode;
+
 /*
  * The Meta page is always the first page in the btree index.
  * Its primary purpose is to point to the location of the btree root page.
@@ -97,7 +104,8 @@ typedef struct BTMetaPageData
 {
 	uint32		btm_magic;		/* should contain BTREE_MAGIC */
 	uint32		btm_version;	/* should contain BTREE_VERSION */
-	BlockNumber btm_root;		/* current root location */
+    SkiplistNode head;
+    SkiplistNode tail;
     BlockNumber btm_next_free;
 } BTMetaPageData;
 
@@ -108,13 +116,6 @@ typedef struct BTMetaPageData
 #define BTREE_MAGIC		0x053162	/* magic number of btree pages */
 #define BTREE_VERSION	3		/* current version number */
 #define SKIPLIST_HEIGHT 12
-
-typedef struct SkiplistNode
-{
-    ItemPointerData next[SKIPLIST_HEIGHT];
-    ItemPointerData thisLocation;
-    IndexTupleData data;
-} SkiplistNode;
 
 /*
  * Maximum size of a btree index entry, including its tuple header.
@@ -263,6 +264,15 @@ typedef struct BTStackData
 } BTStackData;
 
 typedef BTStackData *BTStack;
+
+typedef struct SkiplistContextData
+{
+    ItemPointerData preds[SKIPLIST_HEIGHT];
+    ItemPointerData succs[SKIPLIST_HEIGHT];
+    int lfound;
+} SkiplistContextData;
+
+typedef SkiplistContextData *SkiplistContext;
 
 /*
  * BTScanOpaqueData is the btree-private state needed for an indexscan.

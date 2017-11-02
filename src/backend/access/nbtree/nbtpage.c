@@ -56,8 +56,14 @@ _bt_initmetapage(Page page, BlockNumber rootbknum, uint32 level)
 	metad = BTPageGetMeta(page);
 	metad->btm_magic = BTREE_MAGIC;
 	metad->btm_version = BTREE_VERSION;
-	metad->btm_root = rootbknum;
     metad->btm_next_free = rootbknum;
+
+    for (int i = 0; i < SKIPLIST_HEIGHT; i++) {
+        metad->head.next[i].ip_blkid = rootbknum;
+        metad->head.next[i].ip_posid = 
+            ((char *) &(metad->tail)) -
+            ((char *) page);
+    }
 
 	metaopaque = (BTPageOpaque) PageGetSpecialPointer(page);
 	metaopaque->btpo_flags = BTP_META;

@@ -93,18 +93,48 @@ _bt_drop_lock_and_maybe_pin(IndexScanDesc scan, BTScanPos sp)
  * will result in *bufP being set to InvalidBuffer.  Also, in BT_WRITE mode,
  * any incomplete splits encountered during the search will be finished.
  */
-BTStack
+SkiplistContext
 _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		   Buffer *bufP, int access, Snapshot snapshot)
 {
-	BTStack		stack_in = NULL;
+    Page page;
+
+	SkiplistContext ctx_in = (SkiplistContext) palloc(sizeof(SkiplistContextData));
+    ctx_in->lfound = -1;
+    for (int i = 0; i < SKIPLIST_HEIGHT; i++) {
+        ctx_in->preds[i] = NULL;
+        ctx_in->succs[i] = NULL;
+    }
+    
 
 	/* Get the root page to start with */
 	*bufP = _bt_getroot(rel, access);
+    page = BufferGetPage(*bufP);
+    BTMetaPageData *metad = BTPageGetMeta(page);
 
 	/* If index is empty and access = BT_READ, no root page is created. */
 	if (!BufferIsValid(*bufP))
-		return (BTStack) NULL;
+		return (SkiplistContext) NULL;
+
+    SkiplistNode prev = metad->head;
+    for (int level = SKIPLIST_HEIGHT; level >= level--) {
+        SkiplistNode curr = read_logical_pointer(prev->next[level]);
+                /*this function doesn't actaully exist by this name */
+
+		int comparison = _bt_compare(rel, keysz, scankey, page, curr->itemPointer);
+        while (/* scan key check */) {
+            pred = curr;
+            curr = read_logical_pointer(pred->next[level]);
+                /* this function doesn't actually eixst by this name */
+        }
+
+        if (ctx_in->lfound == -1 && /* scankey claims exact match */) {
+            ctx_in->lfound = level;
+        }
+
+        ctx_in->preds[level] = pred;
+        ctx_in->succs[level] = curr;
+    }
 
 	/* Loop iterates once per level descended in the tree */
 	for (;;)
@@ -116,7 +146,6 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		IndexTuple	itup;
 		BlockNumber blkno;
 		BlockNumber par_blkno;
-		BTStack		new_stack;
 
 		/*
 		 * Race -- the page we just grabbed may have split since we read its
@@ -160,7 +189,6 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		 * child link to disambiguate duplicate keys in the index -- Lehman
 		 * and Yao disallow duplicate keys.)
 		 */
-		new_stack = (BTStack) palloc(sizeof(BTStackData));
 		new_stack->bts_blkno = par_blkno;
 		new_stack->bts_offset = offnum;
 		memcpy(&new_stack->bts_btentry, itup, sizeof(IndexTupleData));
@@ -173,7 +201,7 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		stack_in = new_stack;
 	}
 
-	return stack_in;
+	return ctx_in;
 }
 
 /*
