@@ -118,17 +118,16 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 
     SkiplistNode prev = metad->head;
     for (int level = SKIPLIST_HEIGHT; level >= level--) {
-        SkiplistNode curr = read_logical_pointer(prev->next[level]);
-                /*this function doesn't actaully exist by this name */
+		SkiplistNode curr = PageGetItem(page, PageGetItemId(page, prev->next[level].ip_posid));
 
 		int comparison = _bt_compare(rel, keysz, scankey, page, curr->itemPointer);
-        while (/* scan key check */) {
-            pred = curr;
-            curr = read_logical_pointer(pred->next[level]);
-                /* this function doesn't actually eixst by this name */
+        while (comparison < 0) {
+            prev = curr;
+			curr = PageGetItem(page, PageGetItemId(page, prev->next[level].ip_posid));
+			comparison = _bt_compare(rel, keysz, scankey, page, curr->itemPointer);
         }
 
-        if (ctx_in->lfound == -1 && /* scankey claims exact match */) {
+        if (ctx_in->lfound == -1 && comparison == 0) {
             ctx_in->lfound = level;
         }
 
@@ -137,7 +136,7 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
     }
 
 	/* Loop iterates once per level descended in the tree */
-	for (;;)
+	/*for (;;)
 	{
 		Page		page;
 		BTPageOpaque opaque;
@@ -158,12 +157,12 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		 * any of the upper levels (they are taken care of in _bt_getstackbuf,
 		 * if the leaf page is split and we insert to the parent page).  But
 		 * this is a good opportunity to finish splits of internal pages too.
-		 */
+		 * /
 		*bufP = _bt_moveright(rel, *bufP, keysz, scankey, nextkey,
 							  (access == BT_WRITE), stack_in,
 							  BT_READ, snapshot);
 
-		/* if this is a leaf page, we're done */
+		/* if this is a leaf page, we're done * /
 		page = BufferGetPage(*bufP);
 		opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 		if (P_ISLEAF(opaque))
@@ -172,7 +171,7 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		/*
 		 * Find the appropriate item on the internal page, and get the child
 		 * page that it points to.
-		 */
+		 * /
 		offnum = _bt_binsrch(rel, *bufP, keysz, scankey, nextkey);
 		itemid = PageGetItemId(page, offnum);
 		itup = (IndexTuple) PageGetItem(page, itemid);
@@ -188,18 +187,18 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		 * by Lehman and Yao for how this is detected and handled. (We use the
 		 * child link to disambiguate duplicate keys in the index -- Lehman
 		 * and Yao disallow duplicate keys.)
-		 */
+		 * /
 		new_stack->bts_blkno = par_blkno;
 		new_stack->bts_offset = offnum;
 		memcpy(&new_stack->bts_btentry, itup, sizeof(IndexTupleData));
 		new_stack->bts_parent = stack_in;
 
-		/* drop the read lock on the parent page, acquire one on the child */
+		/* drop the read lock on the parent page, acquire one on the child * /
 		*bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ);
 
-		/* okay, all set to move down a level */
+		/* okay, all set to move down a level * /
 		stack_in = new_stack;
-	}
+	}*/
 
 	return ctx_in;
 }
