@@ -93,6 +93,8 @@ typedef struct SkiplistNode
     IndexTupleData data;
 } SkiplistNode;
 
+SkiplistNode getSkipNodeFromBlock(Buffer buf, ItemPointerData ptr);
+
 /*
  * The Meta page is always the first page in the btree index.
  * Its primary purpose is to point to the location of the btree root page.

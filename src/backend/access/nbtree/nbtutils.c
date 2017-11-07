@@ -51,6 +51,10 @@ static bool _bt_check_rowcompare(ScanKey skey,
 					 ScanDirection dir, bool *continuescan);
 
 
+SkiplistNode *getSkipNodeFromBlock(Page *page, ItemPointerData ptr) {
+	return (SkiplistNode *) PageGetItem(page, PageGetItemId(page, ptr.ip_posid));
+}
+
 /*
  * _bt_mkscankey
  *		Build an insertion scan key that contains comparison data from itup

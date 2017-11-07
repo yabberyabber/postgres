@@ -24,6 +24,7 @@
 #include "storage/lmgr.h"
 #include "storage/predicate.h"
 #include "utils/tqual.h"
+#include <strings.h>
 
 
 typedef struct
@@ -85,6 +86,10 @@ static bool _bt_isequal(TupleDesc itupdesc, Page page, OffsetNumber offnum,
 			int keysz, ScanKey scankey);
 static void _bt_vacuum_one_page(Relation rel, Buffer buffer, Relation heapRel);
 
+int randomLevel() {
+	long ranVal = random() & (1 << SKIPLIST_HEIGHT) - 1;
+	return ffs(ranVal) > 0 ? ffs(ranVal) : 1;
+}
 
 /*
  *	_bt_doinsert() -- Handle insertion of a single index tuple in the tree.
@@ -108,7 +113,7 @@ bool
 _bt_doinsert(Relation rel, IndexTuple itup,
 			 IndexUniqueCheck checkUnique, Relation heapRel)
 {
-    int topLevel = randomLevel(); /* implement this later */
+    int topLevel = randomLevel();
 
 	bool		is_unique = false;
 	int			natts = rel->rd_rel->relnatts;
@@ -135,12 +140,61 @@ _bt_doinsert(Relation rel, IndexTuple itup,
             continue;
         }
 
-        int highestLocked = -1;
+		bool valid = true; //denotes if skiplist is in bad state
         ItemPointerData preds[SKIPLIST_HEIGHT], succs[SKIPLIST_HEIGHT];
-        bool valid = true;
-        for (int level = 0; valid && level <= topLevel; level++) {
-            
-        }
+		ItemPointerData toLock[SKIPLIST_HEIGHT];
+		//populate block ids to lock
+        for (int level = 0; level <= topLevel; level++) {
+			toLock[level] = context.preds[level];//.ip_blkid;
+		}
+		//sort block ids
+		for (int level = 0; level <= topLevel; level++) {
+			for (int i = 0; i < topLevel - 1; level++) {
+				if (toLock[i].ip_blkid > toLock[i + 1].ip_blkid) {
+					BlockNumber tmp = toLock[i];
+					toLock[i] = toLock[i + 1];
+					toLock[i + 1] = tmp;
+				}
+			}
+		}
+		//lock block ids in order
+		BlockNumber last = 0;
+		Buffer listBuffs[SKIPLIST_HEIGHT];
+		Page indexPages[SKIPLIST_HEIGHT];
+		for (int level = 0; level <= topLevel; level++) {
+			if(last != toLock[level].ip_blkid){
+				Buffer buf = _bt_getbuf(rel, toLock[level], BT_WRITE);
+				last = toLock[level].ip_blkid;
+				listBuffs[level] = buf;
+			} else {
+				listBuffs[level] = listBuffs[level - 1];
+			}
+			indexPages[leve] = BufferGetPage(listBuffs[level]);
+		}
+		//load skiplistnodes
+		SkiplistNode *loadedPreds[SKIPLIST_HEIGHT];
+		for (int level = 0; level <= topLevel; level++) {
+			int pageDex = 0;
+			for (int checklevel = 0; checklevel <= topLevel; checklevel++) {
+				if(preds[level] == toLock[level]) {
+					padeDex = checklevel;
+					break;
+				}
+			}
+			loadedPreds[level] = getSkipNodeFromBlock(&(indexPages[pageDex]), preds[level]);
+		}
+		//check validity through magic or maybe not? world can't change, exclusive lock
+		for (int level = 0; level <= topLevel && valid; level++) {
+			if(loadedPreds[level]->next[level] != succ[level]){
+				valid = false;
+				break;
+			}
+		}
+		//if not continue
+		//else
+		//loop through nodes and have them point to new correct items
+
+		//goto finally, reserve place in hell, and release locks
     }
 
 top:
