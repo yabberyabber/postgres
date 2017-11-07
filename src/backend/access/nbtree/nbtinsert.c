@@ -108,19 +108,43 @@ bool
 _bt_doinsert(Relation rel, IndexTuple itup,
 			 IndexUniqueCheck checkUnique, Relation heapRel)
 {
+    int topLevel = randomLevel(); /* implement this later */
+
 	bool		is_unique = false;
 	int			natts = rel->rd_rel->relnatts;
 	ScanKey		itup_scankey;
-	BTStack		stack;
+	SkiplistContext context;
 	Buffer		buf;
 	OffsetNumber offset;
 
 	/* we need an insertion scan key to do our search, so build one */
 	itup_scankey = _bt_mkscankey(rel, itup);
 
+	context = _bt_search(rel, natts, itup_scankey, false, &buf, BT_WRITE, NULL);
+
+    while (true) {
+        if (context->lfound != -1 && checkUnique == UNIQUE_CHECK_NO) {
+            ItemPointerData nodeFound = context->succs[context->lfound];
+            Buffer nodeFoundBuff = _bt_getbuf(rel, nodeFound.ip_blkid, BT_READ);
+            Page nodeFoundPage = BufferGetPage(nodeFoundBuff)
+            SkiplistNode curr = PageGetItem(nodeFoundPage, PageGetItemId(nodeFoundPage, nodeFound.ip_posid));
+            if (!curr->marked) {
+                while (!curr->fullyLinked) {}
+                return false;
+            }
+            continue;
+        }
+
+        int highestLocked = -1;
+        ItemPointerData preds[SKIPLIST_HEIGHT], succs[SKIPLIST_HEIGHT];
+        bool valid = true;
+        for (int level = 0; valid && level <= topLevel; level++) {
+            
+        }
+    }
+
 top:
 	/* find the first page containing this key */
-	stack = _bt_search(rel, natts, itup_scankey, false, &buf, BT_WRITE, NULL);
 
 	offset = InvalidOffsetNumber;
 

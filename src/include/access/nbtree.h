@@ -270,6 +270,8 @@ typedef struct SkiplistContextData
     ItemPointerData preds[SKIPLIST_HEIGHT];
     ItemPointerData succs[SKIPLIST_HEIGHT];
     int lfound;
+    int marked;
+    int fullyLinked;
 } SkiplistContextData;
 
 typedef SkiplistContextData *SkiplistContext;
