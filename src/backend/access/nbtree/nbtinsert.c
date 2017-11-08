@@ -126,7 +126,9 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 	itup_scankey = _bt_mkscankey(rel, itup);
 
 	context = _bt_search(rel, natts, itup_scankey, false, &buf, BT_WRITE, NULL);
-
+	//Make new SkipListNode
+	//Get next empty page
+	//_bt_insertonpg(rel, buf, InvalidBuffer, stack, itup, offset, false);
     while (true) {
         if (context->lfound != -1 && checkUnique == UNIQUE_CHECK_NO) {
             ItemPointerData nodeFound = context->succs[context->lfound];
@@ -140,7 +142,6 @@ _bt_doinsert(Relation rel, IndexTuple itup,
             continue;
         }
 
-		bool valid = true; //denotes if skiplist is in bad state
         ItemPointerData preds[SKIPLIST_HEIGHT], succs[SKIPLIST_HEIGHT];
 		ItemPointerData toLock[SKIPLIST_HEIGHT];
 		//populate block ids to lock
@@ -183,40 +184,42 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 			}
 			loadedPreds[level] = getSkipNodeFromBlock(&(indexPages[pageDex]), preds[level]);
 		}
-		//check validity through magic or maybe not? world can't change, exclusive lock
+		
+		//loop through nodes and have them point to new correct items
 		for (int level = 0; level <= topLevel && valid; level++) {
-			if(loadedPreds[level]->next[level] != succ[level]){
-				valid = false;
-				break;
+			loadedPreds[level]->next[level] = /*New constructed skiplist node*/;
+		}
+		//Release all locks
+		for (int level = 0; level <= topLevel; level++) {
+			if(last != toLock[level].ip_blkid){
+				_bt_relbuff(rel, listBuffs[level]);
+				last = toLock[level].ip_blkid;
 			}
 		}
-		//if not continue
-		//else
-		//loop through nodes and have them point to new correct items
 
-		//goto finally, reserve place in hell, and release locks
+		break;
     }
 
-top:
-	/* find the first page containing this key */
+/*top:
+	/ * find the first page containing this key * /
 
 	offset = InvalidOffsetNumber;
 
-	/* trade in our read lock for a write lock */
+	/ * trade in our read lock for a write lock * /
 	LockBuffer(buf, BUFFER_LOCK_UNLOCK);
 	LockBuffer(buf, BT_WRITE);
 
-	/*
+	/ *
 	 * If the page was split between the time that we surrendered our read
 	 * lock and acquired our write lock, then this page may no longer be the
 	 * right place for the key we want to insert.  In this case, we need to
 	 * move right in the tree.  See Lehman and Yao for an excruciatingly
 	 * precise description.
-	 */
+	 * /
 	buf = _bt_moveright(rel, buf, natts, itup_scankey, false,
 						true, stack, BT_WRITE, NULL);
 
-	/*
+	/ *
 	 * If we're not allowing duplicates, make sure the key isn't already in
 	 * the index.
 	 *
@@ -236,7 +239,7 @@ top:
 	 * For a partial uniqueness check, we don't wait for the other xact. Just
 	 * let the tuple in and return false for possibly non-unique, or true for
 	 * definitely unique.
-	 */
+	 * /
 	if (checkUnique != UNIQUE_CHECK_NO)
 	{
 		TransactionId xwait;
@@ -248,20 +251,20 @@ top:
 
 		if (TransactionIdIsValid(xwait))
 		{
-			/* Have to wait for the other guy ... */
+			/ * Have to wait for the other guy ... * /
 			_bt_relbuf(rel, buf);
 
-			/*
+			/ *
 			 * If it's a speculative insertion, wait for it to finish (ie. to
 			 * go ahead with the insertion, or kill the tuple).  Otherwise
 			 * wait for the transaction to finish as usual.
-			 */
+			 * /
 			if (speculativeToken)
 				SpeculativeInsertionWait(xwait, speculativeToken);
 			else
 				XactLockTableWait(xwait, rel, &itup->t_tid, XLTW_InsertIndex);
 
-			/* start over... */
+			/ * start over... * /
 			_bt_freestack(stack);
 			goto top;
 		}
@@ -269,27 +272,28 @@ top:
 
 	if (checkUnique != UNIQUE_CHECK_EXISTING)
 	{
-		/*
+		/ *
 		 * The only conflict predicate locking cares about for indexes is when
 		 * an index tuple insert conflicts with an existing lock.  Since the
 		 * actual location of the insert is hard to predict because of the
 		 * random search used to prevent O(N^2) performance when there are
 		 * many duplicate entries, we can just use the "first valid" page.
-		 */
+		 * /
 		CheckForSerializableConflictIn(rel, NULL, buf);
-		/* do the insertion */
+		/* do the insertion * /
 		_bt_findinsertloc(rel, &buf, &offset, natts, itup_scankey, itup,
 						  stack, heapRel);
 		_bt_insertonpg(rel, buf, InvalidBuffer, stack, itup, offset, false);
 	}
 	else
 	{
-		/* just release the buffer */
+		/ * just release the buffer * /
 		_bt_relbuf(rel, buf);
-	}
+	}* /
 
 	/* be tidy */
-	_bt_freestack(stack);
+	//_bt_freestack(stack);
+	//Do we need to free our stack??
 	_bt_freeskey(itup_scankey);
 
 	return is_unique;
