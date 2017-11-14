@@ -56,7 +56,8 @@ _bt_initmetapage(Page page, BlockNumber rootbknum, uint32 level)
 	metad = BTPageGetMeta(page);
 	metad->btm_magic = BTREE_MAGIC;
 	metad->btm_version = BTREE_VERSION;
-    metad->btm_next_free = rootbknum;
+	metad->btm_next_free = rootbknum;
+	metad->nextOffset = 1;
 
     for (int i = 0; i < SKIPLIST_HEIGHT; i++) {
         metad->head.next[i].ip_blkid = rootbknum;

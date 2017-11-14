@@ -127,9 +127,7 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 	itup_scankey = _bt_mkscankey(rel, itup);
 
 	context = _bt_search(rel, natts, itup_scankey, false, &buf, BT_WRITE, NULL);
-	//Make new SkipListNode
-	//Get next empty page
-	//_bt_insertonpg(rel, buf, InvalidBuffer, stack, itup, offset, false);
+	ItemPointerData newPos = _bt_getSkipNodeLoc(rel, itup);
     while (true) {
         if (context->lfound != -1 && checkUnique == UNIQUE_CHECK_NO) {
             ItemPointerData nodeFound = context->succs[context->lfound];
@@ -146,7 +144,7 @@ _bt_doinsert(Relation rel, IndexTuple itup,
             continue;
         }
 
-        ItemPointerData preds[SKIPLIST_HEIGHT], succs[SKIPLIST_HEIGHT];
+        //ItemPointerData preds[SKIPLIST_HEIGHT], succs[SKIPLIST_HEIGHT];
 		ItemPointerData toLock[SKIPLIST_HEIGHT];
 		//populate block ids to lock
         for (int level = 0; level <= topLevel; level++) {
@@ -191,16 +189,25 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 		
 		//loop through nodes and have them point to new correct items
 		for (int level = 0; level <= topLevel && valid; level++) {
-			loadedPreds[level]->next[level] = /*New constructed skiplist node*/;
+			loadedPreds[level]->next[level] = newPos;
 		}
 		//Release all locks
 		for (int level = 0; level <= topLevel; level++) {
 			if(last != toLock[level].ip_blkid){
-				_bt_relbuff(rel, listBuffs[level]);
+				_bt_relbuf(rel, listBuffs[level]);
 				last = toLock[level].ip_blkid;
 			}
 		}
 
+		SkiplistNode newNode = palloc(IndexTupleDSize(*itup) + sizeof(SkiplistNodeData););
+		//loop through nodes and have them point to new correct items
+		for (int level = 0; level <= topLevel && valid; level++) {
+			newNode[level]->next[level] = context.succs[level];
+		}
+		newNode->thisLocation = newPos;
+		memcpy(&(newNode->data) , itup, IndexTupleDSize(*itup));
+		_bt_writeSkipNode(rel, newPos, newNode);
+		pfree(newNode);
 		break;
     }
 
@@ -296,8 +303,7 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 	}* /
 
 	/* be tidy */
-	//_bt_freestack(stack);
-	//Do we need to free our stack??
+	_bt_freestack(context);
 	_bt_freeskey(itup_scankey);
 
 	return is_unique;
@@ -783,6 +789,55 @@ _bt_findinsertloc(Relation rel,
 	*offsetptr = newitemoff;
 }
 
+static void
+_bt_writeSkipNode(Relation rel, ItemPointerData location,
+					SkipListNode node) {
+
+	BlockNumber nextBlockNum= location.ip_blkid;
+	Buffer nextBuffer = _bt_getbuf(rel, nextBlockNum, BT_WRITE);
+	Page nextPage = BufferGetPage(nextBuffer);
+	Size itemsz = IndexTupleDSize(node->data) + sizeof(SkiplistNodeData);
+	itemsz = MAXALIGN(itemsz);
+
+	PageAddItem(nextPage, (Item) node, itemsz, location.ip_posid);
+	_bt_relbuf(rel, nextBuffer);
+}
+static ItemPointerData
+_bt_findSkipNodeLoc(Relation rel,
+				IndexTuple itup) {
+	/* Get the root page to start with */
+	Buffer bufP = _bt_getroot(rel, BT_READ);
+    Page page = BufferGetPage(bufP);
+	BTMetaPageData *metad = BTPageGetMeta(page);
+	Size itemsz = IndexTupleDSize(*itup) + sizeof(SkiplistNodeData);
+	itemsz = MAXALIGN(itemsz);
+
+	/* If index is empty and access = BT_READ, no root page is created. */
+	//if (!BufferIsValid(*bufP))
+	//	return (SkiplistContext) NULL;
+
+	BlockNumber nextBlockNum= metad->btm_next_free;
+	Buffer nextBuffer = _bt_getbuf(rel, nextBlockNum, BT_WRITE);
+	Page nextPage = BufferGetPage(nextBuffer);
+
+	if (PageGetFreeSpace(nextPage) < itemsz) {
+		Buffer newBuffer = _bt_getbuf(rel, P_NEW, BT_WRITE);
+		BlockNumber newBlock = BufferGetBlockNumber(newBuffer);
+		metad->btm_next_free = newBlock;
+		nextBlockNum= newBlock;
+		metad->nextOffset = 1;
+		_bt_relbuf(rel, newBuffer);
+	}
+	OffsetNumber dataOff = metad->nextOffset;
+	ItemPointerData ret;
+	ret.ip_blkid = nextBlockNum;
+	ret.ip_posid = dataOff;
+	metad->nextOffset = metad->nextOffset + 1;
+	_bt_relbuf(rel, bufP);
+	_bt_relbuf(rel, nextBuffer);
+	return ret;
+
+}
 /*----------
  *	_bt_insertonpg() -- Insert a tuple on a particular page in the index.
  *

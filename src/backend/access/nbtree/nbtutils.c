@@ -165,16 +165,9 @@ _bt_freeskey(ScanKey skey)
  * free a retracement stack made by _bt_search.
  */
 void
-_bt_freestack(BTStack stack)
+_bt_freestack(SkiplistContext stack)
 {
-	BTStack		ostack;
-
-	while (stack != NULL)
-	{
-		ostack = stack;
-		stack = stack->bts_parent;
-		pfree(ostack);
-	}
+	pfree(stack);
 }
 
 
