@@ -85,9 +85,10 @@ static bool _bt_pgaddtup(Page page, Size itemsize, IndexTuple itup,
 static bool _bt_isequal(TupleDesc itupdesc, Page page, OffsetNumber offnum,
 			int keysz, ScanKey scankey);
 static void _bt_vacuum_one_page(Relation rel, Buffer buffer, Relation heapRel);
+static int randomLevel();
 
-int randomLevel() {
-	long ranVal = random() & (1 << SKIPLIST_HEIGHT) - 1;
+static int randomLevel() {
+	long ranVal = random() & ((1 << SKIPLIST_HEIGHT) - 1);
 	return ffs(ranVal) > 0 ? ffs(ranVal) : 1;
 }
 
@@ -132,9 +133,12 @@ _bt_doinsert(Relation rel, IndexTuple itup,
     while (true) {
         if (context->lfound != -1 && checkUnique == UNIQUE_CHECK_NO) {
             ItemPointerData nodeFound = context->succs[context->lfound];
-            Buffer nodeFoundBuff = _bt_getbuf(rel, nodeFound.ip_blkid, BT_READ);
-            Page nodeFoundPage = BufferGetPage(nodeFoundBuff)
-            SkiplistNode curr = PageGetItem(nodeFoundPage, PageGetItemId(nodeFoundPage, nodeFound.ip_posid));
+            Buffer nodeFoundBuff = _bt_getbuf(rel,
+                    *((BlockNumber*) &(nodeFound.ip_blkid)),
+                    BT_READ);
+            Page nodeFoundPage = BufferGetPage(nodeFoundBuff);
+            SkiplistNode curr = PageGetItem(nodeFoundPage,
+                    PageGetItemId(nodeFoundPage, nodeFound.ip_posid));
             if (!curr->marked) {
                 while (!curr->fullyLinked) {}
                 return false;

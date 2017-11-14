@@ -84,6 +84,7 @@ typedef BTPageOpaqueData *BTPageOpaque;
  * while still allowing index type to be identified.
  */
 #define MAX_BT_CYCLE_ID		0xFF7F
+#define SKIPLIST_HEIGHT 12
 
 
 typedef struct SkiplistNode
@@ -117,7 +118,6 @@ typedef struct BTMetaPageData
 #define BTREE_METAPAGE	0		/* first page is meta */
 #define BTREE_MAGIC		0x053162	/* magic number of btree pages */
 #define BTREE_VERSION	3		/* current version number */
-#define SKIPLIST_HEIGHT 12
 
 /*
  * Maximum size of a btree index entry, including its tuple header.
@@ -516,7 +516,7 @@ extern int	_bt_pagedel(Relation rel, Buffer buf);
 /*
  * prototypes for functions in nbtsearch.c
  */
-extern BTStack _bt_search(Relation rel,
+extern SkiplistContext _bt_search(Relation rel,
 		   int keysz, ScanKey scankey, bool nextkey,
 		   Buffer *bufP, int access, Snapshot snapshot);
 extern Buffer _bt_moveright(Relation rel, Buffer buf, int keysz,
