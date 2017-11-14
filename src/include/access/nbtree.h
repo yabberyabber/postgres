@@ -94,7 +94,7 @@ typedef struct SkiplistNode
     IndexTupleData data;
 } SkiplistNode;
 
-SkiplistNode getSkipNodeFromBlock(Buffer buf, ItemPointerData ptr);
+SkiplistNode *getSkipNodeFromBlock(Page *page, ItemPointerData ptr);
 
 /*
  * The Meta page is always the first page in the btree index.
@@ -538,7 +538,7 @@ extern Buffer _bt_get_endpoint(Relation rel, uint32 level, bool rightmost,
 extern ScanKey _bt_mkscankey(Relation rel, IndexTuple itup);
 extern ScanKey _bt_mkscankey_nodata(Relation rel);
 extern void _bt_freeskey(ScanKey skey);
-extern void _bt_freestack(BTStack stack);
+extern void _bt_freestack(SkiplistContext stack);
 extern void _bt_preprocess_array_keys(IndexScanDesc scan);
 extern void _bt_start_array_keys(IndexScanDesc scan, ScanDirection dir);
 extern bool _bt_advance_array_keys(IndexScanDesc scan, ScanDirection dir);

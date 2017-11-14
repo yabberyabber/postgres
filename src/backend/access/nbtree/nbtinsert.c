@@ -86,6 +86,9 @@ static bool _bt_isequal(TupleDesc itupdesc, Page page, OffsetNumber offnum,
 			int keysz, ScanKey scankey);
 static void _bt_vacuum_one_page(Relation rel, Buffer buffer, Relation heapRel);
 static int randomLevel();
+static ItemPointerData _bt_getSkipNodeLoc(Relation rel, IndexTuple itup);
+static void _bt_writeSkipNode(Relation rel, ItemPointerData location,
+					SkiplistNode *node);
 
 static int randomLevel() {
 	long ranVal = random() & ((1 << SKIPLIST_HEIGHT) - 1);
@@ -110,6 +113,15 @@ static int randomLevel() {
  *		successful UNIQUE_CHECK_YES or UNIQUE_CHECK_EXISTING call, but
  *		that's just a coding artifact.)
  */
+static uint32 toBlkNumber(BlockIdData dat);
+static uint32 toBlkNumber(BlockIdData dat) {
+    return *((uint32*) &(dat));
+}
+static BlockIdData toBlkIdData(BlockNumber dat);
+static BlockIdData toBlkIdData(BlockNumber dat) {
+    return *((BlockIdData*) &(dat));
+}
+
 bool
 _bt_doinsert(Relation rel, IndexTuple itup,
 			 IndexUniqueCheck checkUnique, Relation heapRel)
@@ -120,92 +132,99 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 	int			natts = rel->rd_rel->relnatts;
 	ScanKey		itup_scankey;
 	SkiplistContext context;
-	Buffer		buf;
 	OffsetNumber offset;
+    ItemPointerData newPos, nodeFound;
+    Buffer nodeFoundBuff;
+    Page nodeFoundPage, indexPages[SKIPLIST_HEIGHT];
+    SkiplistNode *curr, *loadedPreds[SKIPLIST_HEIGHT], *newNode;
+    ItemPointerData toLock[SKIPLIST_HEIGHT], tmp;
+    BlockNumber last;
+    Buffer listBuffs[SKIPLIST_HEIGHT], buf;
+    Page indexPage[SKIPLIST_HEIGHT];
+    int level, i, pageDex, checklevel;
 
 	/* we need an insertion scan key to do our search, so build one */
 	itup_scankey = _bt_mkscankey(rel, itup);
 
 	context = _bt_search(rel, natts, itup_scankey, false, &buf, BT_WRITE, NULL);
-	ItemPointerData newPos = _bt_getSkipNodeLoc(rel, itup);
+	newPos = _bt_getSkipNodeLoc(rel, itup);
+
     while (true) {
         if (context->lfound != -1 && checkUnique == UNIQUE_CHECK_NO) {
-            ItemPointerData nodeFound = context->succs[context->lfound];
-            Buffer nodeFoundBuff = _bt_getbuf(rel,
+            nodeFound = context->succs[context->lfound];
+            nodeFoundBuff = _bt_getbuf(rel,
                     *((BlockNumber*) &(nodeFound.ip_blkid)),
                     BT_READ);
-            Page nodeFoundPage = BufferGetPage(nodeFoundBuff);
-            SkiplistNode curr = PageGetItem(nodeFoundPage,
+            nodeFoundPage = BufferGetPage(nodeFoundBuff);
+            curr = (SkiplistNode*) PageGetItem(nodeFoundPage,
                     PageGetItemId(nodeFoundPage, nodeFound.ip_posid));
-            if (!curr->marked) {
-                while (!curr->fullyLinked) {}
-                return false;
-            }
             continue;
         }
 
         //ItemPointerData preds[SKIPLIST_HEIGHT], succs[SKIPLIST_HEIGHT];
-		ItemPointerData toLock[SKIPLIST_HEIGHT];
 		//populate block ids to lock
-        for (int level = 0; level <= topLevel; level++) {
-			toLock[level] = context.preds[level];//.ip_blkid;
+        for (level = 0; level <= topLevel; level++) {
+			toLock[level] = context->preds[level];//.ip_blkid;
 		}
 		//sort block ids
-		for (int level = 0; level <= topLevel; level++) {
-			for (int i = 0; i < topLevel - 1; level++) {
-				if (toLock[i].ip_blkid > toLock[i + 1].ip_blkid) {
-					BlockNumber tmp = toLock[i];
+		for (level = 0; level <= topLevel; level++) {
+			for (i = 0; i < topLevel - 1; level++) {
+				if (toBlkNumber(toLock[i].ip_blkid) >
+                        toBlkNumber(toLock[i + 1].ip_blkid)) {
+					tmp = toLock[i];
 					toLock[i] = toLock[i + 1];
 					toLock[i + 1] = tmp;
 				}
 			}
 		}
 		//lock block ids in order
-		BlockNumber last = 0;
-		Buffer listBuffs[SKIPLIST_HEIGHT];
-		Page indexPages[SKIPLIST_HEIGHT];
-		for (int level = 0; level <= topLevel; level++) {
-			if(last != toLock[level].ip_blkid){
-				Buffer buf = _bt_getbuf(rel, toLock[level], BT_WRITE);
-				last = toLock[level].ip_blkid;
+		last = 0;
+		for (level = 0; level <= topLevel; level++) {
+			if(last != toBlkNumber(toLock[level].ip_blkid)) {
+				buf = _bt_getbuf(rel,
+                        toBlkNumber(toLock[level].ip_blkid),
+                        BT_WRITE);
+				last = toBlkNumber(toLock[level].ip_blkid);
 				listBuffs[level] = buf;
 			} else {
 				listBuffs[level] = listBuffs[level - 1];
 			}
-			indexPages[leve] = BufferGetPage(listBuffs[level]);
+			indexPages[level] = BufferGetPage(listBuffs[level]);
 		}
 		//load skiplistnodes
-		SkiplistNode *loadedPreds[SKIPLIST_HEIGHT];
-		for (int level = 0; level <= topLevel; level++) {
-			int pageDex = 0;
-			for (int checklevel = 0; checklevel <= topLevel; checklevel++) {
-				if(preds[level] == toLock[level]) {
-					padeDex = checklevel;
+		for (level = 0; level <= topLevel; level++) {
+			pageDex = 0;
+			for (checklevel = 0; checklevel <= topLevel; checklevel++) {
+				if(toBlkNumber(context->preds[level].ip_blkid) ==
+                        toBlkNumber(toLock[level].ip_blkid)) {
+					pageDex = checklevel;
 					break;
 				}
 			}
-			loadedPreds[level] = getSkipNodeFromBlock(&(indexPages[pageDex]), preds[level]);
+			loadedPreds[level] = getSkipNodeFromBlock(indexPages + pageDex,
+                    context->preds[level]);
 		}
 		
 		//loop through nodes and have them point to new correct items
-		for (int level = 0; level <= topLevel && valid; level++) {
+		for (level = 0; level <= topLevel; level++) {
 			loadedPreds[level]->next[level] = newPos;
 		}
 		//Release all locks
-		for (int level = 0; level <= topLevel; level++) {
-			if(last != toLock[level].ip_blkid){
+		for (level = 0; level <= topLevel; level++) {
+			if(last != toBlkNumber(toLock[level].ip_blkid)) {
 				_bt_relbuf(rel, listBuffs[level]);
-				last = toLock[level].ip_blkid;
+				last = toBlkNumber(toLock[level].ip_blkid);
 			}
 		}
 
-		SkiplistNode newNode = palloc(IndexTupleDSize(*itup) + sizeof(SkiplistNodeData););
+		newNode = (SkiplistNode*) palloc(
+                IndexTupleDSize(*itup) + sizeof(SkiplistNode));
 		//loop through nodes and have them point to new correct items
-		for (int level = 0; level <= topLevel && valid; level++) {
-			newNode[level]->next[level] = context.succs[level];
+		for (level = 0; level <= topLevel; level++) {
+			newNode->next[level] = context->succs[level];
 		}
 		newNode->thisLocation = newPos;
-		memcpy(&(newNode->data) , itup, IndexTupleDSize(*itup));
+		memcpy(&(newNode->data), itup, IndexTupleDSize(*itup));
 		_bt_writeSkipNode(rel, newPos, newNode);
 		pfree(newNode);
 		break;
@@ -291,18 +310,17 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 		 * many duplicate entries, we can just use the "first valid" page.
 		 * /
 		CheckForSerializableConflictIn(rel, NULL, buf);
-		/* do the insertion * /
+		* do the insertion * /
 		_bt_findinsertloc(rel, &buf, &offset, natts, itup_scankey, itup,
 						  stack, heapRel);
 		_bt_insertonpg(rel, buf, InvalidBuffer, stack, itup, offset, false);
 	}
 	else
 	{
-		/ * just release the buffer * /
+		 * just release the buffer * /
 		_bt_relbuf(rel, buf);
-	}* /
+	}*/
 
-	/* be tidy */
 	_bt_freestack(context);
 	_bt_freeskey(itup_scankey);
 
@@ -791,7 +809,7 @@ _bt_findinsertloc(Relation rel,
 
 static void
 _bt_writeSkipNode(Relation rel, ItemPointerData location,
-					SkipListNode node) {
+					SkipListNode *node) {
 
 	BlockNumber nextBlockNum= location.ip_blkid;
 	Buffer nextBuffer = _bt_getbuf(rel, nextBlockNum, BT_WRITE);
@@ -802,8 +820,9 @@ _bt_writeSkipNode(Relation rel, ItemPointerData location,
 	PageAddItem(nextPage, (Item) node, itemsz, location.ip_posid);
 	_bt_relbuf(rel, nextBuffer);
 }
+
 static ItemPointerData
-_bt_findSkipNodeLoc(Relation rel,
+_bt_getSkipNodeLoc(Relation rel,
 				IndexTuple itup) {
 	/* Get the root page to start with */
 	Buffer bufP = _bt_getroot(rel, BT_READ);
