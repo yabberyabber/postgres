@@ -111,7 +111,7 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 	*bufP = _bt_getroot(rel, access);
     page = BufferGetPage(*bufP);
     BTMetaPageData *metad = BTPageGetMeta(page);
-
+	
 	/* If index is empty and access = BT_READ, no root page is created. */
 	if (!BufferIsValid(*bufP))
 		return (SkiplistContext) NULL;

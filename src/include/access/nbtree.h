@@ -108,7 +108,8 @@ typedef struct BTMetaPageData
 	uint32		btm_version;	/* should contain BTREE_VERSION */
     SkiplistNode head;
     SkiplistNode tail;
-    BlockNumber btm_next_free;
+	BlockNumber btm_next_free;
+	OffsetNumber nextOffset;
 } BTMetaPageData;
 
 #define BTPageGetMeta(p) \
