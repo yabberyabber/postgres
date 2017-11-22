@@ -132,7 +132,6 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 	int			natts = rel->rd_rel->relnatts;
 	ScanKey		itup_scankey;
 	SkiplistContext context;
-	OffsetNumber offset;
     ItemPointerData newPos, nodeFound;
     Buffer nodeFoundBuff;
     Page nodeFoundPage, indexPages[SKIPLIST_HEIGHT];
@@ -140,7 +139,6 @@ _bt_doinsert(Relation rel, IndexTuple itup,
     ItemPointerData toLock[SKIPLIST_HEIGHT], tmp;
     BlockNumber last;
     Buffer listBuffs[SKIPLIST_HEIGHT], buf;
-    Page indexPage[SKIPLIST_HEIGHT];
     int level, i, pageDex, checklevel;
 
 	/* we need an insertion scan key to do our search, so build one */
@@ -168,7 +166,7 @@ _bt_doinsert(Relation rel, IndexTuple itup,
 		}
 		//sort block ids
 		for (level = 0; level <= topLevel; level++) {
-			for (i = 0; i < topLevel - 1; level++) {
+			for (i = 0; i < topLevel - 1; i++) {
 				if (toBlkNumber(toLock[i].ip_blkid) >
                         toBlkNumber(toLock[i + 1].ip_blkid)) {
 					tmp = toLock[i];
@@ -809,15 +807,15 @@ _bt_findinsertloc(Relation rel,
 
 static void
 _bt_writeSkipNode(Relation rel, ItemPointerData location,
-					SkipListNode *node) {
+					SkiplistNode *node) {
 
-	BlockNumber nextBlockNum= location.ip_blkid;
+	BlockNumber nextBlockNum = toBlkNumber(location.ip_blkid);
 	Buffer nextBuffer = _bt_getbuf(rel, nextBlockNum, BT_WRITE);
 	Page nextPage = BufferGetPage(nextBuffer);
-	Size itemsz = IndexTupleDSize(node->data) + sizeof(SkiplistNodeData);
+	Size itemsz = IndexTupleDSize(node->data) + sizeof(SkiplistNode);
 	itemsz = MAXALIGN(itemsz);
 
-	PageAddItem(nextPage, (Item) node, itemsz, location.ip_posid);
+	PageAddItem(nextPage, (Item) node, itemsz, location.ip_posid, false, false);
 	_bt_relbuf(rel, nextBuffer);
 }
 
@@ -828,7 +826,7 @@ _bt_getSkipNodeLoc(Relation rel,
 	Buffer bufP = _bt_getroot(rel, BT_READ);
     Page page = BufferGetPage(bufP);
 	BTMetaPageData *metad = BTPageGetMeta(page);
-	Size itemsz = IndexTupleDSize(*itup) + sizeof(SkiplistNodeData);
+	Size itemsz = IndexTupleDSize(*itup) + sizeof(SkiplistNode);
 	itemsz = MAXALIGN(itemsz);
 
 	/* If index is empty and access = BT_READ, no root page is created. */
@@ -849,7 +847,7 @@ _bt_getSkipNodeLoc(Relation rel,
 	}
 	OffsetNumber dataOff = metad->nextOffset;
 	ItemPointerData ret;
-	ret.ip_blkid = nextBlockNum;
+	ret.ip_blkid = toBlkIdData(nextBlockNum);
 	ret.ip_posid = dataOff;
 	metad->nextOffset = metad->nextOffset + 1;
 	_bt_relbuf(rel, bufP);
@@ -890,6 +888,7 @@ _bt_getSkipNodeLoc(Relation rel,
  *		insertion on internal pages.
  *----------
  */
+
 static void
 _bt_insertonpg(Relation rel,
 			   Buffer buf,
@@ -899,6 +898,7 @@ _bt_insertonpg(Relation rel,
 			   OffsetNumber newitemoff,
 			   bool split_only_page)
 {
+	#if 0
 	Page		page;
 	BTPageOpaque lpageop;
 	OffsetNumber firstright = InvalidOffsetNumber;
@@ -1099,6 +1099,7 @@ _bt_insertonpg(Relation rel,
 			_bt_relbuf(rel, cbuf);
 		_bt_relbuf(rel, buf);
 	}
+	#endif
 }
 
 /*
@@ -1898,6 +1899,7 @@ _bt_insert_parent(Relation rel,
 void
 _bt_finish_split(Relation rel, Buffer lbuf, BTStack stack)
 {
+	#if 0
 	Page		lpage = BufferGetPage(lbuf);
 	BTPageOpaque lpageop = (BTPageOpaque) PageGetSpecialPointer(lpage);
 	Buffer		rbuf;
@@ -1939,6 +1941,7 @@ _bt_finish_split(Relation rel, Buffer lbuf, BTStack stack)
 		 BufferGetBlockNumber(lbuf), BufferGetBlockNumber(rbuf));
 
 	_bt_insert_parent(rel, lbuf, rbuf, stack, was_root, was_only);
+	#endif
 }
 
 /*
@@ -2077,6 +2080,7 @@ static Buffer
 _bt_newroot(Relation rel, Buffer lbuf, Buffer rbuf)
 {
 	Buffer		rootbuf;
+	#if 0
 	Page		lpage,
 				rootpage;
 	BlockNumber lbkno,
@@ -2224,7 +2228,7 @@ _bt_newroot(Relation rel, Buffer lbuf, Buffer rbuf)
 
 	pfree(left_item);
 	pfree(right_item);
-
+	#endif
 	return rootbuf;
 }
 

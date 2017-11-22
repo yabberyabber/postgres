@@ -98,10 +98,10 @@ _bt_restore_meta(XLogReaderState *record, uint8 block_id)
 	md = BTPageGetMeta(metapg);
 	md->btm_magic = BTREE_MAGIC;
 	md->btm_version = BTREE_VERSION;
-	md->btm_root = xlrec->root;
-	md->btm_level = xlrec->level;
-	md->btm_fastroot = xlrec->fastroot;
-	md->btm_fastlevel = xlrec->fastlevel;
+	//md->btm_root = xlrec->root;
+	//md->btm_level = xlrec->level;
+	//md->btm_fastroot = xlrec->fastroot;
+	//md->btm_fastlevel = xlrec->fastlevel;
 
 	pageop = (BTPageOpaque) PageGetSpecialPointer(metapg);
 	pageop->btpo_flags = BTP_META;

@@ -42,6 +42,15 @@ static bool _bt_lock_branch_parent(Relation rel, BlockNumber child,
 static void _bt_log_reuse_page(Relation rel, BlockNumber blkno,
 				   TransactionId latestRemovedXid);
 
+static uint32 toBlkNumber(BlockIdData dat);
+static uint32 toBlkNumber(BlockIdData dat) {
+	return *((uint32*) &(dat));
+}
+static BlockIdData toBlkIdData(BlockNumber dat);
+static BlockIdData toBlkIdData(BlockNumber dat) {
+	return *((BlockIdData*) &(dat));
+}
+
 /*
  *	_bt_initmetapage() -- Fill a page buffer with a correct metapage image
  */
@@ -60,7 +69,7 @@ _bt_initmetapage(Page page, BlockNumber rootbknum, uint32 level)
 	metad->nextOffset = 1;
 
     for (int i = 0; i < SKIPLIST_HEIGHT; i++) {
-        metad->head.next[i].ip_blkid = rootbknum;
+        metad->head.next[i].ip_blkid = toBlkIdData(rootbknum);
         metad->head.next[i].ip_posid = 
             ((char *) &(metad->tail)) -
             ((char *) page);
@@ -108,7 +117,7 @@ _bt_initmetapage(Page page, BlockNumber rootbknum, uint32 level)
 Buffer
 _bt_getroot(Relation rel, int access)
 {
-	Buffer		metabuf;
+	/*Buffer		metabuf;
 	Page		metapg;
 	BTPageOpaque metaopaque;
 	Buffer		rootbuf;
@@ -116,8 +125,10 @@ _bt_getroot(Relation rel, int access)
 	BTPageOpaque rootopaque;
 	BlockNumber rootblkno;
 	uint32		rootlevel;
-	BTMetaPageData *metad;
+	BTMetaPageData *metad;*/
 
+	return _bt_getbuf(rel, BTREE_METAPAGE, BT_READ);
+	#if 0
 	/*
 	 * Try to use previously-cached metapage data to find the root.  This
 	 * normally saves one buffer access per index search, which is a very
@@ -217,10 +228,10 @@ _bt_getroot(Relation rel, int access)
 		rootblkno = BufferGetBlockNumber(rootbuf);
 		rootpage = BufferGetPage(rootbuf);
 		rootopaque = (BTPageOpaque) PageGetSpecialPointer(rootpage);
-		rootopaque->btpo_prev = rootopaque->btpo_next = P_NONE;
+		/*rootopaque->btpo_prev = rootopaque->btpo_next = P_NONE;
 		rootopaque->btpo_flags = (BTP_LEAF | BTP_ROOT);
 		rootopaque->btpo.level = 0;
-		rootopaque->btpo_cycleid = 0;
+		rootopaque->btpo_cycleid = 0;*/
 
 		/* NO ELOG(ERROR) till meta is updated */
 		START_CRIT_SECTION();
@@ -322,6 +333,7 @@ _bt_getroot(Relation rel, int access)
 	 * on the metadata page.  Return the root page's buffer.
 	 */
 	return rootbuf;
+	#endif
 }
 
 /*
@@ -341,10 +353,11 @@ _bt_getroot(Relation rel, int access)
 Buffer
 _bt_gettrueroot(Relation rel)
 {
-	Buffer		metabuf;
+	Buffer		rootbuf = 0;
+	#if 0
 	Page		metapg;
 	BTPageOpaque metaopaque;
-	Buffer		rootbuf;
+	Buffer		metabuf;
 	Page		rootpage;
 	BTPageOpaque rootopaque;
 	BlockNumber rootblkno;
@@ -417,7 +430,7 @@ _bt_gettrueroot(Relation rel)
 		elog(ERROR, "root page %u of index \"%s\" has level %u, expected %u",
 			 rootblkno, RelationGetRelationName(rel),
 			 rootopaque->btpo.level, rootlevel);
-
+	#endif
 	return rootbuf;
 }
 
@@ -434,7 +447,8 @@ _bt_gettrueroot(Relation rel)
  */
 int
 _bt_getrootheight(Relation rel)
-{
+{	
+	#if 0
 	BTMetaPageData *metad;
 
 	/*
@@ -495,6 +509,8 @@ _bt_getrootheight(Relation rel)
 	Assert(metad->btm_fastroot != P_NONE);
 
 	return metad->btm_fastlevel;
+	#endif
+	return 1;
 }
 
 /*
@@ -1109,6 +1125,7 @@ _bt_lock_branch_parent(Relation rel, BlockNumber child, BTStack stack,
 int
 _bt_pagedel(Relation rel, Buffer buf)
 {
+	#if 0
 	int			ndeleted = 0;
 	BlockNumber rightsib;
 	bool		rightsib_empty;
@@ -1312,6 +1329,8 @@ _bt_pagedel(Relation rel, Buffer buf)
 	}
 
 	return ndeleted;
+	#endif
+	return 0;
 }
 
 /*
@@ -1512,6 +1531,7 @@ _bt_mark_page_halfdead(Relation rel, Buffer leafbuf, BTStack stack)
 static bool
 _bt_unlink_halfdead_page(Relation rel, Buffer leafbuf, bool *rightsib_empty)
 {
+	#if 0
 	BlockNumber leafblkno = BufferGetBlockNumber(leafbuf);
 	BlockNumber leafleftsib;
 	BlockNumber leafrightsib;
@@ -1880,6 +1900,6 @@ _bt_unlink_halfdead_page(Relation rel, Buffer leafbuf, bool *rightsib_empty)
 	 */
 	if (target != leafblkno)
 		_bt_relbuf(rel, buf);
-
+	#endif
 	return true;
 }

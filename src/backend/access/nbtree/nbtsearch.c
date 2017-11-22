@@ -101,10 +101,10 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 
 	SkiplistContext ctx_in = (SkiplistContext) palloc(sizeof(SkiplistContextData));
     ctx_in->lfound = -1;
-    for (int i = 0; i < SKIPLIST_HEIGHT; i++) {
+    /*for (int i = 0; i < SKIPLIST_HEIGHT; i++) {
         ctx_in->preds[i] = NULL;
         ctx_in->succs[i] = NULL;
-    }
+    }*/
     
 
 	/* Get the root page to start with */
@@ -116,23 +116,23 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 	if (!BufferIsValid(*bufP))
 		return (SkiplistContext) NULL;
 
-    SkiplistNode prev = metad->head;
-    for (int level = SKIPLIST_HEIGHT; level >= level--) {
-		SkiplistNode curr = PageGetItem(page, PageGetItemId(page, prev->next[level].ip_posid));
+    SkiplistNode *prev = &(metad->head);
+    for (int level = SKIPLIST_HEIGHT; level >= 0; level--) {
+		SkiplistNode *curr = (SkiplistNode *)PageGetItem(page, PageGetItemId(page, prev->next[level].ip_posid));
 
-		int comparison = _bt_compare(rel, keysz, scankey, page, curr->itemPointer);
+		int comparison = _bt_compare(rel, keysz, scankey, page, curr->data.t_tid.ip_posid);
         while (comparison < 0) {
             prev = curr;
-			curr = PageGetItem(page, PageGetItemId(page, prev->next[level].ip_posid));
-			comparison = _bt_compare(rel, keysz, scankey, page, curr->itemPointer);
+			curr = (SkiplistNode *)PageGetItem(page, PageGetItemId(page, prev->next[level].ip_posid));
+			comparison = _bt_compare(rel, keysz, scankey, page, curr->data.t_tid.ip_posid);
         }
 
         if (ctx_in->lfound == -1 && comparison == 0) {
             ctx_in->lfound = level;
         }
 
-        ctx_in->preds[level] = pred;
-        ctx_in->succs[level] = curr;
+        ctx_in->preds[level] = prev->thisLocation;
+        ctx_in->succs[level] = curr->thisLocation;
     }
 
 	/* Loop iterates once per level descended in the tree */
@@ -146,7 +146,7 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		BlockNumber blkno;
 		BlockNumber par_blkno;
 
-		/*
+		/ *
 		 * Race -- the page we just grabbed may have split since we read its
 		 * pointer in the parent (or metapage).  If it has, we may need to
 		 * move right to its new sibling.  Do that.
@@ -162,13 +162,13 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 							  (access == BT_WRITE), stack_in,
 							  BT_READ, snapshot);
 
-		/* if this is a leaf page, we're done * /
+		/ * if this is a leaf page, we're done * /
 		page = BufferGetPage(*bufP);
 		opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 		if (P_ISLEAF(opaque))
 			break;
 
-		/*
+		/ *
 		 * Find the appropriate item on the internal page, and get the child
 		 * page that it points to.
 		 * /
@@ -178,7 +178,7 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		blkno = ItemPointerGetBlockNumber(&(itup->t_tid));
 		par_blkno = BufferGetBlockNumber(*bufP);
 
-		/*
+		/ *
 		 * We need to save the location of the index entry we chose in the
 		 * parent page on a stack. In case we split the tree, we'll use the
 		 * stack to work back up to the parent page.  We also save the actual
@@ -193,10 +193,10 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 		memcpy(&new_stack->bts_btentry, itup, sizeof(IndexTupleData));
 		new_stack->bts_parent = stack_in;
 
-		/* drop the read lock on the parent page, acquire one on the child * /
+		/ * drop the read lock on the parent page, acquire one on the child * /
 		*bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ);
 
-		/* okay, all set to move down a level * /
+		/ * okay, all set to move down a level * /
 		stack_in = new_stack;
 	}*/
 
