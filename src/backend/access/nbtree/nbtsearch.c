@@ -565,7 +565,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	Relation	rel = scan->indexRelation;
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 	Buffer		buf;
-	BTStack		stack;
+	SkiplistContext		context;
 	OffsetNumber offnum;
 	StrategyNumber strat;
 	bool		nextkey;
@@ -1052,11 +1052,11 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	 * Use the manufactured insertion scan key to descend the tree and
 	 * position ourselves on the target leaf page.
 	 */
-	stack = _bt_search(rel, keysCount, scankeys, nextkey, &buf, BT_READ,
+	context = _bt_search(rel, keysCount, scankeys, nextkey, &buf, BT_READ,
 					   scan->xs_snapshot);
 
 	/* don't need to keep the stack around... */
-	_bt_freestack(stack);
+	_bt_freestack(context);
 
 	if (!BufferIsValid(buf))
 	{
