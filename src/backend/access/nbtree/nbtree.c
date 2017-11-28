@@ -130,7 +130,7 @@ bthandler(PG_FUNCTION_ARGS)
 	amroutine->amsupport = BTNProcs;
 	amroutine->amcanorder = true;
 	amroutine->amcanorderbyop = false;
-	amroutine->amcanbackward = true;
+	amroutine->amcanbackward = false;
 	amroutine->amcanunique = true;
 	amroutine->amcanmulticol = true;
 	amroutine->amoptionalkey = true;

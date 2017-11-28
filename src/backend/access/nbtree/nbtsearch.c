@@ -1439,17 +1439,17 @@ _bt_steppage(IndexScanDesc scan, ScanDirection dir)
 		/* release the previous buffer, if pinned */
 		BTScanPosUnpinIfPinned(so->currPos);
 	}
-	else
+	/*else
 	{
-		/* Remember we left a page with data */
+		/ * Remember we left a page with data * /
 		so->currPos.moreRight = true;
 
 		if (scan->parallel_scan != NULL)
 		{
-			/*
+			/ *
 			 * Seize the scan to get the current block number; if the scan has
 			 * ended already, bail out.
-			 */
+			 * /
 			status = _bt_parallel_seize(scan, &blkno);
 			BTScanPosUnpinIfPinned(so->currPos);
 			if (!status)
@@ -1460,10 +1460,10 @@ _bt_steppage(IndexScanDesc scan, ScanDirection dir)
 		}
 		else
 		{
-			/* Not parallel, so just use our own notion of the current page */
+			/ * Not parallel, so just use our own notion of the current page * /
 			blkno = so->currPos.currPage;
 		}
-	}
+	}*/
 
 	if (!_bt_readnextpage(scan, blkno, dir))
 		return false;
