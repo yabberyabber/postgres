@@ -590,6 +590,8 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	StrategyNumber strat_total;
 	BTScanPosItem *currItem;
 	BlockNumber blkno;
+	Page page;
+	SkiplistNode *node;
 
 	Assert(!BTScanPosIsValid(so->currPos));
 
@@ -1092,6 +1094,7 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 
 	/* position to the precise item on the page */
 	offnum = context->succs[context->lfound].ip_posid + sizeof(SkiplistNode) - sizeof(IndexTupleData);
+	so->thisNode = context->succs[context->lfound];
 
 	/* don't need to keep the stack around... */
 	_bt_freestack(context);
@@ -1141,11 +1144,13 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	}
 
 readcomplete:
-	/* OK, itemIndex says what to return */
-	currItem = &so->currPos.items[so->currPos.itemIndex];
-	scan->xs_ctup.t_self = currItem->heapTid;
+	page = BufferGetPage(buf);
+	node = (SkiplistNode *)PageGetItem(page, PageGetItemId(page, so->thisNode.ip_posid));
+	_bt_saveitem(so, 0, 0, &(node->data));
+	scan->xs_ctup.t_self = so->thisNode;//currItem->heapTid;
+	scan->xs_ctup.t_self.ip_posid = offnum;
 	if (scan->xs_want_itup)
-		scan->xs_itup = (IndexTuple) (so->currTuples + currItem->tupleOffset);
+		scan->xs_itup = (IndexTuple) (so->currTuples);
 
 	return true;
 }
@@ -1168,12 +1173,17 @@ bool
 _bt_next(IndexScanDesc scan, ScanDirection dir)
 {
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
-	BTScanPosItem *currItem;
+	Relation	rel = scan->indexRelation;
+	Buffer buf;
+	Page page;
+	SkiplistNode *node;
+	OffsetNumber offnum;
+	/*BTScanPosItem *currItem;
 
-	/*
+	/ *
 	 * Advance to next tuple on current page; or if there's no more, try to
 	 * step to the next page with data.
-	 */
+	 * /
 	if (ScanDirectionIsForward(dir))
 	{
 		if (++so->currPos.itemIndex > so->currPos.lastItem)
@@ -1191,11 +1201,22 @@ _bt_next(IndexScanDesc scan, ScanDirection dir)
 		}
 	}
 
-	/* OK, itemIndex says what to return */
-	currItem = &so->currPos.items[so->currPos.itemIndex];
-	scan->xs_ctup.t_self = currItem->heapTid;
+	/ * OK, itemIndex says what to return * /
+	currItem = &so->currPos.items[so->currPos.itemIndex];*/
+	buf = so->currPos.buf = buf;
+	page = BufferGetPage(buf);
+	node = (SkiplistNode *)PageGetItem(page, PageGetItemId(page, so->thisNode.ip_posid));
+	so->thisNode = node->next[0];
+	_bt_relbuf(rel, buf);
+	buf = _bt_getbuf(rel, toBlkNumber(so->thisNode.ip_blkid) ,BT_READ);
+	page = BufferGetPage(buf);
+	node = (SkiplistNode *)PageGetItem(page, PageGetItemId(page, so->thisNode.ip_posid));
+	_bt_saveitem(so, 0, 0, &(node->data));
+	offnum = so->thisNode.ip_posid + sizeof(SkiplistNode) - sizeof(IndexTupleData);
+	scan->xs_ctup.t_self = so->thisNode;//currItem->heapTid;
+	scan->xs_ctup.t_self.ip_posid = offnum;
 	if (scan->xs_want_itup)
-		scan->xs_itup = (IndexTuple) (so->currTuples + currItem->tupleOffset);
+		scan->xs_itup = (IndexTuple) (so->currTuples);
 
 	return true;
 }

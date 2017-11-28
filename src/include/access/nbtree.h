@@ -433,6 +433,7 @@ typedef struct BTScanOpaqueData
 	/* keep these last in struct for efficiency */
 	BTScanPosData currPos;		/* current position data */
 	BTScanPosData markPos;		/* marked position, if any */
+	ItemPointerData thisNode;
 } BTScanOpaqueData;
 
 typedef BTScanOpaqueData *BTScanOpaque;
