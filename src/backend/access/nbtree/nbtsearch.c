@@ -37,7 +37,14 @@ static Buffer _bt_walk_left(Relation rel, Buffer buf, Snapshot snapshot);
 static bool _bt_endpoint(IndexScanDesc scan, ScanDirection dir);
 static void _bt_drop_lock_and_maybe_pin(IndexScanDesc scan, BTScanPos sp);
 static inline void _bt_initialize_more_data(BTScanOpaque so, ScanDirection dir);
-
+static uint32 toBlkNumber(BlockIdData dat);
+static uint32 toBlkNumber(BlockIdData dat) {
+	return *((uint32*) &(dat));
+}
+static BlockIdData toBlkIdData(BlockNumber dat);
+static BlockIdData toBlkIdData(BlockNumber dat) {
+	return *((BlockIdData*) &(dat));
+}
 
 /*
  *	_bt_drop_lock_and_maybe_pin()
@@ -118,11 +125,15 @@ _bt_search(Relation rel, int keysz, ScanKey scankey, bool nextkey,
 
     SkiplistNode *prev = &(metad->head);
     for (int level = SKIPLIST_HEIGHT; level >= 0; level--) {
+		*bufP = _bt_getbuf(rel, toBlkNumber(prev->next[level].ip_blkid) ,BT_READ);
+		page = BufferGetPage(*bufP);
 		SkiplistNode *curr = (SkiplistNode *)PageGetItem(page, PageGetItemId(page, prev->next[level].ip_posid));
 
 		int comparison = _bt_compare(rel, keysz, scankey, page, curr->data.t_tid.ip_posid);
         while (comparison < 0) {
-            prev = curr;
+			prev = curr;
+			*bufP = _bt_getbuf(rel, toBlkNumber(prev->next[level].ip_blkid) ,BT_READ);
+			page = BufferGetPage(*bufP);
 			curr = (SkiplistNode *)PageGetItem(page, PageGetItemId(page, prev->next[level].ip_posid));
 			comparison = _bt_compare(rel, keysz, scankey, page, curr->data.t_tid.ip_posid);
         }
@@ -1055,8 +1066,6 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	context = _bt_search(rel, keysCount, scankeys, nextkey, &buf, BT_READ,
 					   scan->xs_snapshot);
 
-	/* don't need to keep the stack around... */
-	_bt_freestack(context);
 
 	if (!BufferIsValid(buf))
 	{
@@ -1082,7 +1091,10 @@ _bt_first(IndexScanDesc scan, ScanDirection dir)
 	_bt_initialize_more_data(so, dir);
 
 	/* position to the precise item on the page */
-	offnum = _bt_binsrch(rel, buf, keysCount, scankeys, nextkey);
+	offnum = context->succs[context->lfound].ip_posid + sizeof(SkiplistNode) - sizeof(IndexTupleData);
+
+	/* don't need to keep the stack around... */
+	_bt_freestack(context);
 
 	/*
 	 * If nextkey = false, we are positioned at the first item >= scan key, or
