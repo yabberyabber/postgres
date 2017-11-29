@@ -1,0 +1,1864 @@
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/rangetypes.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/rangetypes.out	2017-11-28 18:44:47.000000000 -0800
+***************
+*** 655,660 ****
+--- 655,661 ----
+  -- test GiST index that's been built incrementally
+  create table test_range_gist(ir int4range);
+  create index test_range_gist_idx on test_range_gist using gist (ir);
++ ERROR:  invalid amproc number 5 for opclass 10089
+  insert into test_range_gist select int4range(g, g+10) from generate_series(1,2000) g;
+  insert into test_range_gist select 'empty'::int4range from generate_series(1,500) g;
+  insert into test_range_gist select int4range(g, g+10000) from generate_series(1,1000) g;
+***************
+*** 804,810 ****
+--- 805,813 ----
+  
+  -- now check same queries using a bulk-loaded index
+  drop index test_range_gist_idx;
++ ERROR:  index "test_range_gist_idx" does not exist
+  create index test_range_gist_idx on test_range_gist using gist (ir);
++ ERROR:  invalid amproc number 5 for opclass 10089
+  select count(*) from test_range_gist where ir @> 'empty'::int4range;
+   count 
+  -------
+***************
+*** 1135,1154 ****
+    exclude using gist (room with =, during with &&),
+    exclude using gist (speaker with =, during with &&)
+  );
+  insert into test_range_excl
+    values(int4range(123, 123, '[]'), int4range(1, 1, '[]'), '[2010-01-02 10:00, 2010-01-02 11:00)');
+  insert into test_range_excl
+    values(int4range(123, 123, '[]'), int4range(2, 2, '[]'), '[2010-01-02 11:00, 2010-01-02 12:00)');
+  insert into test_range_excl
+    values(int4range(123, 123, '[]'), int4range(3, 3, '[]'), '[2010-01-02 10:10, 2010-01-02 11:00)');
+! ERROR:  conflicting key value violates exclusion constraint "test_range_excl_room_during_excl"
+! DETAIL:  Key (room, during)=([123,124), ["Sat Jan 02 10:10:00 2010","Sat Jan 02 11:00:00 2010")) conflicts with existing key (room, during)=([123,124), ["Sat Jan 02 10:00:00 2010","Sat Jan 02 11:00:00 2010")).
+  insert into test_range_excl
+    values(int4range(124, 124, '[]'), int4range(3, 3, '[]'), '[2010-01-02 10:10, 2010-01-02 11:10)');
+  insert into test_range_excl
+    values(int4range(125, 125, '[]'), int4range(1, 1, '[]'), '[2010-01-02 10:10, 2010-01-02 11:00)');
+! ERROR:  conflicting key value violates exclusion constraint "test_range_excl_speaker_during_excl"
+! DETAIL:  Key (speaker, during)=([1,2), ["Sat Jan 02 10:10:00 2010","Sat Jan 02 11:00:00 2010")) conflicts with existing key (speaker, during)=([1,2), ["Sat Jan 02 10:00:00 2010","Sat Jan 02 11:00:00 2010")).
+  -- test bigint ranges
+  select int8range(10000000000::int8, 20000000000::int8,'(]');
+           int8range         
+--- 1138,1169 ----
+    exclude using gist (room with =, during with &&),
+    exclude using gist (speaker with =, during with &&)
+  );
++ ERROR:  invalid amproc number 5 for opclass 10089
+  insert into test_range_excl
+    values(int4range(123, 123, '[]'), int4range(1, 1, '[]'), '[2010-01-02 10:00, 2010-01-02 11:00)');
++ ERROR:  relation "test_range_excl" does not exist
++ LINE 1: insert into test_range_excl
++                     ^
+  insert into test_range_excl
+    values(int4range(123, 123, '[]'), int4range(2, 2, '[]'), '[2010-01-02 11:00, 2010-01-02 12:00)');
++ ERROR:  relation "test_range_excl" does not exist
++ LINE 1: insert into test_range_excl
++                     ^
+  insert into test_range_excl
+    values(int4range(123, 123, '[]'), int4range(3, 3, '[]'), '[2010-01-02 10:10, 2010-01-02 11:00)');
+! ERROR:  relation "test_range_excl" does not exist
+! LINE 1: insert into test_range_excl
+!                     ^
+  insert into test_range_excl
+    values(int4range(124, 124, '[]'), int4range(3, 3, '[]'), '[2010-01-02 10:10, 2010-01-02 11:10)');
++ ERROR:  relation "test_range_excl" does not exist
++ LINE 1: insert into test_range_excl
++                     ^
+  insert into test_range_excl
+    values(int4range(125, 125, '[]'), int4range(1, 1, '[]'), '[2010-01-02 10:10, 2010-01-02 11:00)');
+! ERROR:  relation "test_range_excl" does not exist
+! LINE 1: insert into test_range_excl
+!                     ^
+  -- test bigint ranges
+  select int8range(10000000000::int8, 20000000000::int8,'(]');
+           int8range         
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/point.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/point.out	2017-11-28 18:44:48.000000000 -0800
+***************
+*** 249,254 ****
+--- 249,255 ----
+  CREATE TEMP TABLE point_gist_tbl(f1 point);
+  INSERT INTO point_gist_tbl SELECT '(0,0)' FROM generate_series(0,1000);
+  CREATE INDEX point_gist_tbl_index ON point_gist_tbl USING gist (f1);
++ ERROR:  invalid amproc number 3 for opclass 10072
+  INSERT INTO point_gist_tbl VALUES ('(0.0000009,0.0000009)');
+  SET enable_seqscan TO true;
+  SET enable_indexscan TO false;
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/inet.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/inet.out	2017-11-28 18:44:48.000000000 -0800
+***************
+*** 265,270 ****
+--- 265,271 ----
+  DROP INDEX inet_idx1;
+  -- check that gist index works correctly
+  CREATE INDEX inet_idx2 ON inet_tbl using gist (i inet_ops);
++ ERROR:  invalid amproc number 3 for opclass 10025
+  SET enable_seqscan TO off;
+  SELECT * FROM inet_tbl WHERE i << '192.168.1.0/24'::cidr ORDER BY i;
+         c        |        i         
+***************
+*** 393,404 ****
+  -- test index-only scans
+  EXPLAIN (COSTS OFF)
+  SELECT i FROM inet_tbl WHERE i << '192.168.1.0/24'::cidr ORDER BY i;
+!                     QUERY PLAN                     
+! ---------------------------------------------------
+   Sort
+     Sort Key: i
+!    ->  Index Only Scan using inet_idx2 on inet_tbl
+!          Index Cond: (i << '192.168.1.0/24'::inet)
+  (4 rows)
+  
+  SELECT i FROM inet_tbl WHERE i << '192.168.1.0/24'::cidr ORDER BY i;
+--- 394,405 ----
+  -- test index-only scans
+  EXPLAIN (COSTS OFF)
+  SELECT i FROM inet_tbl WHERE i << '192.168.1.0/24'::cidr ORDER BY i;
+!                   QUERY PLAN                   
+! -----------------------------------------------
+   Sort
+     Sort Key: i
+!    ->  Seq Scan on inet_tbl
+!          Filter: (i << '192.168.1.0/24'::inet)
+  (4 rows)
+  
+  SELECT i FROM inet_tbl WHERE i << '192.168.1.0/24'::cidr ORDER BY i;
+***************
+*** 411,416 ****
+--- 412,418 ----
+  
+  SET enable_seqscan TO on;
+  DROP INDEX inet_idx2;
++ ERROR:  index "inet_idx2" does not exist
+  -- check that spgist index works correctly
+  CREATE INDEX inet_idx3 ON inet_tbl using spgist (i);
+  SET enable_seqscan TO off;
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/opr_sanity.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/opr_sanity.out	2017-11-28 18:44:49.000000000 -0800
+***************
+*** 1700,1708 ****
+  -- Ask access methods to validate opclasses
+  -- (this replaces a lot of SQL-level checks that used to be done in this file)
+  SELECT oid, opcname FROM pg_opclass WHERE NOT amvalidate(oid);
+!  oid | opcname 
+! -----+---------
+! (0 rows)
+  
+  -- **************** pg_am ****************
+  -- Look for illegal values in pg_am fields
+--- 1700,1854 ----
+  -- Ask access methods to validate opclasses
+  -- (this replaces a lot of SQL-level checks that used to be done in this file)
+  SELECT oid, opcname FROM pg_opclass WHERE NOT amvalidate(oid);
+! INFO:  operator family "network_ops" of access method btree contains function inet_gist_consistent(internal,inet,smallint,oid,internal) with wrong signature for support number 1
+! INFO:  operator family "network_ops" of access method btree contains function inet_gist_union(internal,internal) with wrong signature for support number 2
+! INFO:  operator family "network_ops" of access method btree contains function inet_gist_compress(internal) with invalid support number 3
+! INFO:  operator family "network_ops" of access method btree contains function inet_gist_penalty(internal,internal,internal) with invalid support number 5
+! INFO:  operator family "network_ops" of access method btree contains function inet_gist_picksplit(internal,internal) with invalid support number 6
+! INFO:  operator family "network_ops" of access method btree contains function inet_gist_same(inet,inet,internal) with invalid support number 7
+! INFO:  operator family "network_ops" of access method btree contains function inet_gist_fetch(internal) with invalid support number 9
+! INFO:  operator family "network_ops" of access method btree contains operator =(inet,inet) with invalid strategy number 18
+! INFO:  operator family "network_ops" of access method btree contains operator <>(inet,inet) with invalid strategy number 19
+! INFO:  operator family "network_ops" of access method btree contains operator <(inet,inet) with invalid strategy number 20
+! INFO:  operator family "network_ops" of access method btree contains operator <=(inet,inet) with invalid strategy number 21
+! INFO:  operator family "network_ops" of access method btree contains operator >(inet,inet) with invalid strategy number 22
+! INFO:  operator family "network_ops" of access method btree contains operator >=(inet,inet) with invalid strategy number 23
+! INFO:  operator family "network_ops" of access method btree contains operator <<(inet,inet) with invalid strategy number 24
+! INFO:  operator family "network_ops" of access method btree contains operator <<=(inet,inet) with invalid strategy number 25
+! INFO:  operator family "network_ops" of access method btree contains operator >>(inet,inet) with invalid strategy number 26
+! INFO:  operator family "network_ops" of access method btree contains operator >>=(inet,inet) with invalid strategy number 27
+! INFO:  operator family "network_ops" of access method btree is missing operator(s) for types inet and inet
+! INFO:  operator family "box_ops" of access method btree contains function gist_box_consistent(internal,box,smallint,oid,internal) with wrong signature for support number 1
+! INFO:  operator family "box_ops" of access method btree contains function gist_box_union(internal,internal) with wrong signature for support number 2
+! INFO:  operator family "box_ops" of access method btree contains function gist_box_penalty(internal,internal,internal) with invalid support number 5
+! INFO:  operator family "box_ops" of access method btree contains function gist_box_picksplit(internal,internal) with invalid support number 6
+! INFO:  operator family "box_ops" of access method btree contains function gist_box_same(box,box,internal) with invalid support number 7
+! INFO:  operator family "box_ops" of access method btree contains operator ~=(box,box) with invalid strategy number 6
+! INFO:  operator family "box_ops" of access method btree contains operator @>(box,box) with invalid strategy number 7
+! INFO:  operator family "box_ops" of access method btree contains operator <@(box,box) with invalid strategy number 8
+! INFO:  operator family "box_ops" of access method btree contains operator &<|(box,box) with invalid strategy number 9
+! INFO:  operator family "box_ops" of access method btree contains operator <<|(box,box) with invalid strategy number 10
+! INFO:  operator family "box_ops" of access method btree contains operator |>>(box,box) with invalid strategy number 11
+! INFO:  operator family "box_ops" of access method btree contains operator |&>(box,box) with invalid strategy number 12
+! INFO:  operator family "box_ops" of access method btree contains operator ~(box,box) with invalid strategy number 13
+! INFO:  operator family "box_ops" of access method btree contains operator @(box,box) with invalid strategy number 14
+! INFO:  operator family "box_ops" of access method btree is missing operator(s) for types box and box
+! INFO:  operator family "point_ops" of access method btree contains function gist_point_consistent(internal,point,smallint,oid,internal) with wrong signature for support number 1
+! INFO:  operator family "point_ops" of access method btree contains function gist_box_union(internal,internal) with wrong signature for support number 2
+! INFO:  operator family "point_ops" of access method btree contains function gist_point_compress(internal) with invalid support number 3
+! INFO:  operator family "point_ops" of access method btree contains function gist_box_penalty(internal,internal,internal) with invalid support number 5
+! INFO:  operator family "point_ops" of access method btree contains function gist_box_picksplit(internal,internal) with invalid support number 6
+! INFO:  operator family "point_ops" of access method btree contains function gist_box_same(box,box,internal) with invalid support number 7
+! INFO:  operator family "point_ops" of access method btree contains function gist_point_distance(internal,point,smallint,oid,internal) with invalid support number 8
+! INFO:  operator family "point_ops" of access method btree contains function gist_point_fetch(internal) with invalid support number 9
+! INFO:  operator family "point_ops" of access method btree contains operator ~=(point,point) with invalid strategy number 6
+! INFO:  operator family "point_ops" of access method btree contains operator <^(point,point) with invalid strategy number 10
+! INFO:  operator family "point_ops" of access method btree contains operator >^(point,point) with invalid strategy number 11
+! INFO:  operator family "point_ops" of access method btree contains operator <->(point,point) with invalid strategy number 15
+! INFO:  operator family "point_ops" of access method btree contains invalid ORDER BY specification for operator <->(point,point)
+! INFO:  operator family "point_ops" of access method btree contains operator <->(point,point) with wrong signature
+! INFO:  operator family "point_ops" of access method btree contains operator <@(point,box) with invalid strategy number 28
+! INFO:  operator family "point_ops" of access method btree contains operator <@(point,polygon) with invalid strategy number 48
+! INFO:  operator family "point_ops" of access method btree contains operator <@(point,circle) with invalid strategy number 68
+! INFO:  operator family "point_ops" of access method btree is missing operator(s) for types point and point
+! INFO:  operator family "point_ops" of access method btree is missing operator(s) for types point and box
+! INFO:  operator family "point_ops" of access method btree is missing support function for types point and box
+! INFO:  operator family "point_ops" of access method btree is missing operator(s) for types point and polygon
+! INFO:  operator family "point_ops" of access method btree is missing support function for types point and polygon
+! INFO:  operator family "point_ops" of access method btree is missing operator(s) for types point and circle
+! INFO:  operator family "point_ops" of access method btree is missing support function for types point and circle
+! INFO:  operator family "point_ops" of access method btree is missing cross-type operator(s)
+! INFO:  operator family "poly_ops" of access method btree contains function gist_poly_consistent(internal,polygon,smallint,oid,internal) with wrong signature for support number 1
+! INFO:  operator family "poly_ops" of access method btree contains function gist_box_union(internal,internal) with wrong signature for support number 2
+! INFO:  operator family "poly_ops" of access method btree contains function gist_poly_compress(internal) with invalid support number 3
+! INFO:  operator family "poly_ops" of access method btree contains function gist_box_penalty(internal,internal,internal) with invalid support number 5
+! INFO:  operator family "poly_ops" of access method btree contains function gist_box_picksplit(internal,internal) with invalid support number 6
+! INFO:  operator family "poly_ops" of access method btree contains function gist_box_same(box,box,internal) with invalid support number 7
+! INFO:  operator family "poly_ops" of access method btree contains function gist_poly_distance(internal,polygon,smallint,oid,internal) with invalid support number 8
+! INFO:  operator family "poly_ops" of access method btree contains operator <->(polygon,point) with invalid strategy number 15
+! INFO:  operator family "poly_ops" of access method btree contains invalid ORDER BY specification for operator <->(polygon,point)
+! INFO:  operator family "poly_ops" of access method btree contains operator <->(polygon,point) with wrong signature
+! INFO:  operator family "poly_ops" of access method btree contains operator ~=(polygon,polygon) with invalid strategy number 6
+! INFO:  operator family "poly_ops" of access method btree contains operator @>(polygon,polygon) with invalid strategy number 7
+! INFO:  operator family "poly_ops" of access method btree contains operator <@(polygon,polygon) with invalid strategy number 8
+! INFO:  operator family "poly_ops" of access method btree contains operator &<|(polygon,polygon) with invalid strategy number 9
+! INFO:  operator family "poly_ops" of access method btree contains operator <<|(polygon,polygon) with invalid strategy number 10
+! INFO:  operator family "poly_ops" of access method btree contains operator |>>(polygon,polygon) with invalid strategy number 11
+! INFO:  operator family "poly_ops" of access method btree contains operator |&>(polygon,polygon) with invalid strategy number 12
+! INFO:  operator family "poly_ops" of access method btree contains operator ~(polygon,polygon) with invalid strategy number 13
+! INFO:  operator family "poly_ops" of access method btree contains operator @(polygon,polygon) with invalid strategy number 14
+! INFO:  operator family "poly_ops" of access method btree is missing operator(s) for types polygon and point
+! INFO:  operator family "poly_ops" of access method btree is missing support function for types polygon and point
+! INFO:  operator family "poly_ops" of access method btree is missing operator(s) for types polygon and polygon
+! INFO:  operator family "poly_ops" of access method btree is missing cross-type operator(s)
+! INFO:  operator family "circle_ops" of access method btree contains function gist_circle_consistent(internal,circle,smallint,oid,internal) with wrong signature for support number 1
+! INFO:  operator family "circle_ops" of access method btree contains function gist_box_union(internal,internal) with wrong signature for support number 2
+! INFO:  operator family "circle_ops" of access method btree contains function gist_circle_compress(internal) with invalid support number 3
+! INFO:  operator family "circle_ops" of access method btree contains function gist_box_penalty(internal,internal,internal) with invalid support number 5
+! INFO:  operator family "circle_ops" of access method btree contains function gist_box_picksplit(internal,internal) with invalid support number 6
+! INFO:  operator family "circle_ops" of access method btree contains function gist_box_same(box,box,internal) with invalid support number 7
+! INFO:  operator family "circle_ops" of access method btree contains function gist_circle_distance(internal,circle,smallint,oid,internal) with invalid support number 8
+! INFO:  operator family "circle_ops" of access method btree contains operator <->(circle,point) with invalid strategy number 15
+! INFO:  operator family "circle_ops" of access method btree contains invalid ORDER BY specification for operator <->(circle,point)
+! INFO:  operator family "circle_ops" of access method btree contains operator <->(circle,point) with wrong signature
+! INFO:  operator family "circle_ops" of access method btree contains operator ~=(circle,circle) with invalid strategy number 6
+! INFO:  operator family "circle_ops" of access method btree contains operator @>(circle,circle) with invalid strategy number 7
+! INFO:  operator family "circle_ops" of access method btree contains operator <@(circle,circle) with invalid strategy number 8
+! INFO:  operator family "circle_ops" of access method btree contains operator &<|(circle,circle) with invalid strategy number 9
+! INFO:  operator family "circle_ops" of access method btree contains operator <<|(circle,circle) with invalid strategy number 10
+! INFO:  operator family "circle_ops" of access method btree contains operator |>>(circle,circle) with invalid strategy number 11
+! INFO:  operator family "circle_ops" of access method btree contains operator |&>(circle,circle) with invalid strategy number 12
+! INFO:  operator family "circle_ops" of access method btree contains operator ~(circle,circle) with invalid strategy number 13
+! INFO:  operator family "circle_ops" of access method btree contains operator @(circle,circle) with invalid strategy number 14
+! INFO:  operator family "circle_ops" of access method btree is missing operator(s) for types circle and point
+! INFO:  operator family "circle_ops" of access method btree is missing support function for types circle and point
+! INFO:  operator family "circle_ops" of access method btree is missing operator(s) for types circle and circle
+! INFO:  operator family "circle_ops" of access method btree is missing cross-type operator(s)
+! INFO:  operator family "tsvector_ops" of access method btree contains function gtsvector_consistent(internal,tsvector,smallint,oid,internal) with wrong signature for support number 1
+! INFO:  operator family "tsvector_ops" of access method btree contains function gtsvector_union(internal,internal) with wrong signature for support number 2
+! INFO:  operator family "tsvector_ops" of access method btree contains function gtsvector_compress(internal) with invalid support number 3
+! INFO:  operator family "tsvector_ops" of access method btree contains function gtsvector_decompress(internal) with invalid support number 4
+! INFO:  operator family "tsvector_ops" of access method btree contains function gtsvector_penalty(internal,internal,internal) with invalid support number 5
+! INFO:  operator family "tsvector_ops" of access method btree contains function gtsvector_picksplit(internal,internal) with invalid support number 6
+! INFO:  operator family "tsvector_ops" of access method btree contains function gtsvector_same(gtsvector,gtsvector,internal) with invalid support number 7
+! INFO:  operator family "tsvector_ops" of access method btree is missing operator(s) for types tsvector and tsvector
+! INFO:  operator family "tsvector_ops" of access method btree is missing operator(s) for types tsvector and tsquery
+! INFO:  operator family "tsvector_ops" of access method btree is missing support function for types tsvector and tsquery
+! INFO:  operator family "tsvector_ops" of access method btree is missing cross-type operator(s)
+! INFO:  operator family "tsquery_ops" of access method btree contains function gtsquery_consistent(internal,tsquery,smallint,oid,internal) with wrong signature for support number 1
+! INFO:  operator family "tsquery_ops" of access method btree contains function gtsquery_union(internal,internal) with wrong signature for support number 2
+! INFO:  operator family "tsquery_ops" of access method btree contains function gtsquery_compress(internal) with invalid support number 3
+! INFO:  operator family "tsquery_ops" of access method btree contains function gtsquery_penalty(internal,internal,internal) with invalid support number 5
+! INFO:  operator family "tsquery_ops" of access method btree contains function gtsquery_picksplit(internal,internal) with invalid support number 6
+! INFO:  operator family "tsquery_ops" of access method btree contains function gtsquery_same(bigint,bigint,internal) with invalid support number 7
+! INFO:  operator family "tsquery_ops" of access method btree contains operator @>(tsquery,tsquery) with invalid strategy number 7
+! INFO:  operator family "tsquery_ops" of access method btree contains operator <@(tsquery,tsquery) with invalid strategy number 8
+! INFO:  operator family "tsquery_ops" of access method btree is missing operator(s) for types tsquery and tsquery
+! INFO:  operator family "range_ops" of access method btree contains function range_gist_consistent(internal,anyrange,smallint,oid,internal) with wrong signature for support number 1
+! INFO:  operator family "range_ops" of access method btree contains function range_gist_union(internal,internal) with wrong signature for support number 2
+! INFO:  operator family "range_ops" of access method btree contains function range_gist_penalty(internal,internal,internal) with invalid support number 5
+! INFO:  operator family "range_ops" of access method btree contains function range_gist_picksplit(internal,internal) with invalid support number 6
+! INFO:  operator family "range_ops" of access method btree contains function range_gist_same(anyrange,anyrange,internal) with invalid support number 7
+! INFO:  operator family "range_ops" of access method btree contains operator @>(anyrange,anyelement) with invalid strategy number 16
+! INFO:  operator family "range_ops" of access method btree contains operator -|-(anyrange,anyrange) with invalid strategy number 6
+! INFO:  operator family "range_ops" of access method btree contains operator @>(anyrange,anyrange) with invalid strategy number 7
+! INFO:  operator family "range_ops" of access method btree contains operator <@(anyrange,anyrange) with invalid strategy number 8
+! INFO:  operator family "range_ops" of access method btree contains operator =(anyrange,anyrange) with invalid strategy number 18
+! INFO:  operator family "range_ops" of access method btree is missing operator(s) for types anyrange and anyelement
+! INFO:  operator family "range_ops" of access method btree is missing support function for types anyrange and anyelement
+! INFO:  operator family "range_ops" of access method btree is missing operator(s) for types anyrange and anyrange
+! INFO:  operator family "range_ops" of access method btree is missing cross-type operator(s)
+!   oid  |   opcname    
+! -------+--------------
+!  10025 | inet_ops
+!  10071 | box_ops
+!  10072 | point_ops
+!  10073 | poly_ops
+!  10074 | circle_ops
+!  10083 | tsvector_ops
+!  10086 | tsquery_ops
+!  10089 | range_ops
+! (8 rows)
+  
+  -- **************** pg_am ****************
+  -- Look for illegal values in pg_am fields
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/insert_conflict.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/insert_conflict.out	2017-11-28 18:44:50.000000000 -0800
+***************
+*** 731,756 ****
+  -- check handling of regular btree constraint along with gist constraint
+  create table twoconstraints (f1 int unique, f2 box,
+                               exclude using gist(f2 with &&));
+  insert into twoconstraints values(1, '((0,0),(1,1))');
+  insert into twoconstraints values(1, '((2,2),(3,3))');  -- fail on f1
+! ERROR:  duplicate key value violates unique constraint "twoconstraints_f1_key"
+! DETAIL:  Key (f1)=(1) already exists.
+  insert into twoconstraints values(2, '((0,0),(1,2))');  -- fail on f2
+! ERROR:  conflicting key value violates exclusion constraint "twoconstraints_f2_excl"
+! DETAIL:  Key (f2)=((1,2),(0,0)) conflicts with existing key (f2)=((1,1),(0,0)).
+  insert into twoconstraints values(2, '((0,0),(1,2))')
+    on conflict on constraint twoconstraints_f1_key do nothing;  -- fail on f2
+! ERROR:  conflicting key value violates exclusion constraint "twoconstraints_f2_excl"
+! DETAIL:  Key (f2)=((1,2),(0,0)) conflicts with existing key (f2)=((1,1),(0,0)).
+  insert into twoconstraints values(2, '((0,0),(1,2))')
+    on conflict on constraint twoconstraints_f2_excl do nothing;  -- do nothing
+  select * from twoconstraints;
+!  f1 |     f2      
+! ----+-------------
+!   1 | (1,1),(0,0)
+! (1 row)
+! 
+  drop table twoconstraints;
+  -- check handling of self-conflicts at various isolation levels
+  create table selfconflict (f1 int primary key, f2 int);
+  begin transaction isolation level read committed;
+--- 731,765 ----
+  -- check handling of regular btree constraint along with gist constraint
+  create table twoconstraints (f1 int unique, f2 box,
+                               exclude using gist(f2 with &&));
++ ERROR:  invalid amproc number 5 for opclass 10071
+  insert into twoconstraints values(1, '((0,0),(1,1))');
++ ERROR:  relation "twoconstraints" does not exist
++ LINE 1: insert into twoconstraints values(1, '((0,0),(1,1))');
++                     ^
+  insert into twoconstraints values(1, '((2,2),(3,3))');  -- fail on f1
+! ERROR:  relation "twoconstraints" does not exist
+! LINE 1: insert into twoconstraints values(1, '((2,2),(3,3))');
+!                     ^
+  insert into twoconstraints values(2, '((0,0),(1,2))');  -- fail on f2
+! ERROR:  relation "twoconstraints" does not exist
+! LINE 1: insert into twoconstraints values(2, '((0,0),(1,2))');
+!                     ^
+  insert into twoconstraints values(2, '((0,0),(1,2))')
+    on conflict on constraint twoconstraints_f1_key do nothing;  -- fail on f2
+! ERROR:  relation "twoconstraints" does not exist
+! LINE 1: insert into twoconstraints values(2, '((0,0),(1,2))')
+!                     ^
+  insert into twoconstraints values(2, '((0,0),(1,2))')
+    on conflict on constraint twoconstraints_f2_excl do nothing;  -- do nothing
++ ERROR:  relation "twoconstraints" does not exist
++ LINE 1: insert into twoconstraints values(2, '((0,0),(1,2))')
++                     ^
+  select * from twoconstraints;
+! ERROR:  relation "twoconstraints" does not exist
+! LINE 1: select * from twoconstraints;
+!                       ^
+  drop table twoconstraints;
++ ERROR:  table "twoconstraints" does not exist
+  -- check handling of self-conflicts at various isolation levels
+  create table selfconflict (f1 int primary key, f2 int);
+  begin transaction isolation level read committed;
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/create_index.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/create_index.out	2017-11-28 18:44:52.000000000 -0800
+***************
+*** 55,64 ****
+--- 55,68 ----
+  -- GiST (rtree-equivalent opclasses only)
+  --
+  CREATE INDEX grect2ind ON fast_emp4000 USING gist (home_base);
++ ERROR:  invalid amproc number 5 for opclass 10071
+  CREATE INDEX gpolygonind ON polygon_tbl USING gist (f1);
++ ERROR:  invalid amproc number 3 for opclass 10073
+  CREATE INDEX gcircleind ON circle_tbl USING gist (f1);
++ ERROR:  invalid amproc number 3 for opclass 10074
+  INSERT INTO POINT_TBL(f1) VALUES (NULL);
+  CREATE INDEX gpointind ON point_tbl USING gist (f1);
++ ERROR:  invalid amproc number 3 for opclass 10072
+  CREATE TEMP TABLE gpolygon_tbl AS
+      SELECT polygon(home_base) AS f1 FROM slow_emp4000;
+  INSERT INTO gpolygon_tbl VALUES ( '(1000,0,0,1000)' );
+***************
+*** 66,72 ****
+--- 70,78 ----
+  CREATE TEMP TABLE gcircle_tbl AS
+      SELECT circle(home_base) AS f1 FROM slow_emp4000;
+  CREATE INDEX ggpolygonind ON gpolygon_tbl USING gist (f1);
++ ERROR:  invalid amproc number 3 for opclass 10073
+  CREATE INDEX ggcircleind ON gcircle_tbl USING gist (f1);
++ ERROR:  invalid amproc number 3 for opclass 10074
+  --
+  -- SP-GiST
+  --
+***************
+*** 410,421 ****
+  SELECT * FROM fast_emp4000
+      WHERE home_base @ '(200,200),(2000,1000)'::box
+      ORDER BY (home_base[0])[0];
+!                            QUERY PLAN                           
+! ----------------------------------------------------------------
+   Sort
+     Sort Key: ((home_base[0])[0])
+!    ->  Index Only Scan using grect2ind on fast_emp4000
+!          Index Cond: (home_base @ '(2000,1000),(200,200)'::box)
+  (4 rows)
+  
+  SELECT * FROM fast_emp4000
+--- 416,427 ----
+  SELECT * FROM fast_emp4000
+      WHERE home_base @ '(200,200),(2000,1000)'::box
+      ORDER BY (home_base[0])[0];
+!                          QUERY PLAN                         
+! ------------------------------------------------------------
+   Sort
+     Sort Key: ((home_base[0])[0])
+!    ->  Seq Scan on fast_emp4000
+!          Filter: (home_base @ '(2000,1000),(200,200)'::box)
+  (4 rows)
+  
+  SELECT * FROM fast_emp4000
+***************
+*** 429,439 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+!                          QUERY PLAN                          
+! -------------------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using grect2ind on fast_emp4000
+!          Index Cond: (home_base && '(1000,1000),(0,0)'::box)
+  (3 rows)
+  
+  SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+--- 435,445 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+!                        QUERY PLAN                        
+! ---------------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on fast_emp4000
+!          Filter: (home_base && '(1000,1000),(0,0)'::box)
+  (3 rows)
+  
+  SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+***************
+*** 444,454 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+!                       QUERY PLAN                       
+! -------------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using grect2ind on fast_emp4000
+!          Index Cond: (home_base IS NULL)
+  (3 rows)
+  
+  SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+--- 450,460 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+!              QUERY PLAN              
+! -------------------------------------
+   Aggregate
+!    ->  Seq Scan on fast_emp4000
+!          Filter: (home_base IS NULL)
+  (3 rows)
+  
+  SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+***************
+*** 460,471 ****
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
+      ORDER BY (poly_center(f1))[0];
+!                         QUERY PLAN                         
+! -----------------------------------------------------------
+   Sort
+     Sort Key: ((poly_center(f1))[0])
+!    ->  Index Scan using gpolygonind on polygon_tbl
+!          Index Cond: (f1 ~ '((1,1),(2,2),(2,1))'::polygon)
+  (4 rows)
+  
+  SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
+--- 466,477 ----
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
+      ORDER BY (poly_center(f1))[0];
+!                       QUERY PLAN                       
+! -------------------------------------------------------
+   Sort
+     Sort Key: ((poly_center(f1))[0])
+!    ->  Seq Scan on polygon_tbl
+!          Filter: (f1 ~ '((1,1),(2,2),(2,1))'::polygon)
+  (4 rows)
+  
+  SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
+***************
+*** 478,489 ****
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)
+      ORDER BY area(f1);
+!                     QUERY PLAN                    
+! --------------------------------------------------
+   Sort
+     Sort Key: (area(f1))
+!    ->  Index Scan using gcircleind on circle_tbl
+!          Index Cond: (f1 && '<(1,-2),1>'::circle)
+  (4 rows)
+  
+  SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)
+--- 484,495 ----
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)
+      ORDER BY area(f1);
+!                   QUERY PLAN                  
+! ----------------------------------------------
+   Sort
+     Sort Key: (area(f1))
+!    ->  Seq Scan on circle_tbl
+!          Filter: (f1 && '<(1,-2),1>'::circle)
+  (4 rows)
+  
+  SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)
+***************
+*** 498,508 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM gpolygon_tbl WHERE f1 && '(1000,1000,0,0)'::polygon;
+!                          QUERY PLAN                         
+! ------------------------------------------------------------
+   Aggregate
+!    ->  Index Scan using ggpolygonind on gpolygon_tbl
+!          Index Cond: (f1 && '((1000,1000),(0,0))'::polygon)
+  (3 rows)
+  
+  SELECT count(*) FROM gpolygon_tbl WHERE f1 && '(1000,1000,0,0)'::polygon;
+--- 504,514 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM gpolygon_tbl WHERE f1 && '(1000,1000,0,0)'::polygon;
+!                        QUERY PLAN                       
+! --------------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on gpolygon_tbl
+!          Filter: (f1 && '((1000,1000),(0,0))'::polygon)
+  (3 rows)
+  
+  SELECT count(*) FROM gpolygon_tbl WHERE f1 && '(1000,1000,0,0)'::polygon;
+***************
+*** 513,523 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM gcircle_tbl WHERE f1 && '<(500,500),500>'::circle;
+!                       QUERY PLAN                       
+! -------------------------------------------------------
+   Aggregate
+!    ->  Index Scan using ggcircleind on gcircle_tbl
+!          Index Cond: (f1 && '<(500,500),500>'::circle)
+  (3 rows)
+  
+  SELECT count(*) FROM gcircle_tbl WHERE f1 && '<(500,500),500>'::circle;
+--- 519,529 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM gcircle_tbl WHERE f1 && '<(500,500),500>'::circle;
+!                     QUERY PLAN                     
+! ---------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on gcircle_tbl
+!          Filter: (f1 && '<(500,500),500>'::circle)
+  (3 rows)
+  
+  SELECT count(*) FROM gcircle_tbl WHERE f1 && '<(500,500),500>'::circle;
+***************
+*** 528,538 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl WHERE f1 <@ box '(0,0,100,100)';
+!                      QUERY PLAN                     
+! ----------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl
+!          Index Cond: (f1 <@ '(100,100),(0,0)'::box)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl WHERE f1 <@ box '(0,0,100,100)';
+--- 534,544 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl WHERE f1 <@ box '(0,0,100,100)';
+!                    QUERY PLAN                   
+! ------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl
+!          Filter: (f1 <@ '(100,100),(0,0)'::box)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl WHERE f1 <@ box '(0,0,100,100)';
+***************
+*** 543,553 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl WHERE box '(0,0,100,100)' @> f1;
+!                      QUERY PLAN                     
+! ----------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl
+!          Index Cond: (f1 <@ '(100,100),(0,0)'::box)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl WHERE box '(0,0,100,100)' @> f1;
+--- 549,559 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl WHERE box '(0,0,100,100)' @> f1;
+!                    QUERY PLAN                   
+! ------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl
+!          Filter: ('(100,100),(0,0)'::box @> f1)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl WHERE box '(0,0,100,100)' @> f1;
+***************
+*** 558,568 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl WHERE f1 <@ polygon '(0,0),(0,100),(100,100),(50,50),(100,0),(0,0)';
+!                                        QUERY PLAN                                       
+! ----------------------------------------------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl
+!          Index Cond: (f1 <@ '((0,0),(0,100),(100,100),(50,50),(100,0),(0,0))'::polygon)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl WHERE f1 <@ polygon '(0,0),(0,100),(100,100),(50,50),(100,0),(0,0)';
+--- 564,574 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl WHERE f1 <@ polygon '(0,0),(0,100),(100,100),(50,50),(100,0),(0,0)';
+!                                      QUERY PLAN                                     
+! ------------------------------------------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl
+!          Filter: (f1 <@ '((0,0),(0,100),(100,100),(50,50),(100,0),(0,0))'::polygon)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl WHERE f1 <@ polygon '(0,0),(0,100),(100,100),(50,50),(100,0),(0,0)';
+***************
+*** 573,583 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl WHERE f1 <@ circle '<(50,50),50>';
+!                      QUERY PLAN                     
+! ----------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl
+!          Index Cond: (f1 <@ '<(50,50),50>'::circle)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl WHERE f1 <@ circle '<(50,50),50>';
+--- 579,589 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl WHERE f1 <@ circle '<(50,50),50>';
+!                    QUERY PLAN                   
+! ------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl
+!          Filter: (f1 <@ '<(50,50),50>'::circle)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl WHERE f1 <@ circle '<(50,50),50>';
+***************
+*** 588,598 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
+!                       QUERY PLAN                      
+! ------------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl p
+!          Index Cond: (f1 << '(0,0)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
+--- 594,604 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
+!                QUERY PLAN               
+! ----------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl p
+!          Filter: (f1 << '(0,0)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
+***************
+*** 603,613 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
+!                       QUERY PLAN                      
+! ------------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl p
+!          Index Cond: (f1 >> '(0,0)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
+--- 609,619 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
+!                QUERY PLAN               
+! ----------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl p
+!          Filter: (f1 >> '(0,0)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
+***************
+*** 618,628 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
+!                       QUERY PLAN                      
+! ------------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl p
+!          Index Cond: (f1 <^ '(0,0)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
+--- 624,634 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
+!                QUERY PLAN               
+! ----------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl p
+!          Filter: (f1 <^ '(0,0)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
+***************
+*** 633,643 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
+!                       QUERY PLAN                      
+! ------------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl p
+!          Index Cond: (f1 >^ '(0,0)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
+--- 639,649 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
+!                QUERY PLAN               
+! ----------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl p
+!          Filter: (f1 >^ '(0,0)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
+***************
+*** 648,658 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
+!                       QUERY PLAN                      
+! ------------------------------------------------------
+   Aggregate
+!    ->  Index Only Scan using gpointind on point_tbl p
+!          Index Cond: (f1 ~= '(-5,-12)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
+--- 654,664 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
+!                 QUERY PLAN                 
+! -------------------------------------------
+   Aggregate
+!    ->  Seq Scan on point_tbl p
+!          Filter: (f1 ~= '(-5,-12)'::point)
+  (3 rows)
+  
+  SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
+***************
+*** 663,673 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl ORDER BY f1 <-> '0,1';
+!                   QUERY PLAN                  
+! ----------------------------------------------
+!  Index Only Scan using gpointind on point_tbl
+!    Order By: (f1 <-> '(0,1)'::point)
+! (2 rows)
+  
+  SELECT * FROM point_tbl ORDER BY f1 <-> '0,1';
+       f1     
+--- 669,680 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl ORDER BY f1 <-> '0,1';
+!               QUERY PLAN               
+! ---------------------------------------
+!  Sort
+!    Sort Key: ((f1 <-> '(0,1)'::point))
+!    ->  Seq Scan on point_tbl
+! (3 rows)
+  
+  SELECT * FROM point_tbl ORDER BY f1 <-> '0,1';
+       f1     
+***************
+*** 683,692 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl WHERE f1 IS NULL;
+!                   QUERY PLAN                  
+! ----------------------------------------------
+!  Index Only Scan using gpointind on point_tbl
+!    Index Cond: (f1 IS NULL)
+  (2 rows)
+  
+  SELECT * FROM point_tbl WHERE f1 IS NULL;
+--- 690,699 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl WHERE f1 IS NULL;
+!        QUERY PLAN       
+! ------------------------
+!  Seq Scan on point_tbl
+!    Filter: (f1 IS NULL)
+  (2 rows)
+  
+  SELECT * FROM point_tbl WHERE f1 IS NULL;
+***************
+*** 697,708 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl WHERE f1 IS NOT NULL ORDER BY f1 <-> '0,1';
+!                   QUERY PLAN                  
+! ----------------------------------------------
+!  Index Only Scan using gpointind on point_tbl
+!    Index Cond: (f1 IS NOT NULL)
+!    Order By: (f1 <-> '(0,1)'::point)
+! (3 rows)
+  
+  SELECT * FROM point_tbl WHERE f1 IS NOT NULL ORDER BY f1 <-> '0,1';
+       f1     
+--- 704,716 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl WHERE f1 IS NOT NULL ORDER BY f1 <-> '0,1';
+!               QUERY PLAN               
+! ---------------------------------------
+!  Sort
+!    Sort Key: ((f1 <-> '(0,1)'::point))
+!    ->  Seq Scan on point_tbl
+!          Filter: (f1 IS NOT NULL)
+! (4 rows)
+  
+  SELECT * FROM point_tbl WHERE f1 IS NOT NULL ORDER BY f1 <-> '0,1';
+       f1     
+***************
+*** 717,728 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+!                    QUERY PLAN                   
+! ------------------------------------------------
+!  Index Only Scan using gpointind on point_tbl
+!    Index Cond: (f1 <@ '(10,10),(-10,-10)'::box)
+!    Order By: (f1 <-> '(0,1)'::point)
+! (3 rows)
+  
+  SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+     f1    
+--- 725,737 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+!                     QUERY PLAN                    
+! --------------------------------------------------
+!  Sort
+!    Sort Key: ((f1 <-> '(0,1)'::point))
+!    ->  Seq Scan on point_tbl
+!          Filter: (f1 <@ '(10,10),(-10,-10)'::box)
+! (4 rows)
+  
+  SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+     f1    
+***************
+*** 1184,1195 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM gpolygon_tbl ORDER BY f1 <-> '(0,0)'::point LIMIT 10;
+!                      QUERY PLAN                      
+! -----------------------------------------------------
+   Limit
+!    ->  Index Scan using ggpolygonind on gpolygon_tbl
+!          Order By: (f1 <-> '(0,0)'::point)
+! (3 rows)
+  
+  SELECT * FROM gpolygon_tbl ORDER BY f1 <-> '(0,0)'::point LIMIT 10;
+                         f1                        
+--- 1193,1205 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM gpolygon_tbl ORDER BY f1 <-> '(0,0)'::point LIMIT 10;
+!                  QUERY PLAN                  
+! ---------------------------------------------
+   Limit
+!    ->  Sort
+!          Sort Key: ((f1 <-> '(0,0)'::point))
+!          ->  Seq Scan on gpolygon_tbl
+! (4 rows)
+  
+  SELECT * FROM gpolygon_tbl ORDER BY f1 <-> '(0,0)'::point LIMIT 10;
+                         f1                        
+***************
+*** 1208,1219 ****
+  
+  EXPLAIN (COSTS OFF)
+  SELECT circle_center(f1), round(radius(f1)) as radius FROM gcircle_tbl ORDER BY f1 <-> '(200,300)'::point LIMIT 10;
+!                     QUERY PLAN                     
+! ---------------------------------------------------
+   Limit
+!    ->  Index Scan using ggcircleind on gcircle_tbl
+!          Order By: (f1 <-> '(200,300)'::point)
+! (3 rows)
+  
+  SELECT circle_center(f1), round(radius(f1)) as radius FROM gcircle_tbl ORDER BY f1 <-> '(200,300)'::point LIMIT 10;
+   circle_center  | radius 
+--- 1218,1230 ----
+  
+  EXPLAIN (COSTS OFF)
+  SELECT circle_center(f1), round(radius(f1)) as radius FROM gcircle_tbl ORDER BY f1 <-> '(200,300)'::point LIMIT 10;
+!                    QUERY PLAN                    
+! -------------------------------------------------
+   Limit
+!    ->  Sort
+!          Sort Key: ((f1 <-> '(200,300)'::point))
+!          ->  Seq Scan on gcircle_tbl
+! (4 rows)
+  
+  SELECT circle_center(f1), round(radius(f1)) as radius FROM gcircle_tbl ORDER BY f1 <-> '(200,300)'::point LIMIT 10;
+   circle_center  | radius 
+***************
+*** 1236,1250 ****
+  SET enable_bitmapscan = ON;
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+!                          QUERY PLAN                         
+! ------------------------------------------------------------
+   Sort
+     Sort Key: ((f1 <-> '(0,1)'::point))
+!    ->  Bitmap Heap Scan on point_tbl
+!          Recheck Cond: (f1 <@ '(10,10),(-10,-10)'::box)
+!          ->  Bitmap Index Scan on gpointind
+!                Index Cond: (f1 <@ '(10,10),(-10,-10)'::box)
+! (6 rows)
+  
+  SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+     f1    
+--- 1247,1259 ----
+  SET enable_bitmapscan = ON;
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+!                     QUERY PLAN                    
+! --------------------------------------------------
+   Sort
+     Sort Key: ((f1 <-> '(0,1)'::point))
+!    ->  Seq Scan on point_tbl
+!          Filter: (f1 <@ '(10,10),(-10,-10)'::box)
+! (4 rows)
+  
+  SELECT * FROM point_tbl WHERE f1 <@ '(-10,-10),(10,10)':: box ORDER BY f1 <-> '0,1';
+     f1    
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/constraints.out	2017-11-28 18:44:44.000000000 -0800
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/constraints.out	2017-11-28 18:44:52.000000000 -0800
+***************
+*** 603,636 ****
+      (c1 WITH &&, (c2::circle) WITH &&)
+      WHERE (circle_center(c1) <> '(0,0)')
+  );
+  -- these should succeed because they don't match the index predicate
+  INSERT INTO circles VALUES('<(0,0), 5>', '<(0,0), 5>');
+  INSERT INTO circles VALUES('<(0,0), 5>', '<(0,0), 4>');
+  -- succeed
+  INSERT INTO circles VALUES('<(10,10), 10>', '<(0,0), 5>');
+  -- fail, overlaps
+  INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>');
+! ERROR:  conflicting key value violates exclusion constraint "circles_c1_c2_excl"
+! DETAIL:  Key (c1, (c2::circle))=(<(20,20),10>, <(0,0),4>) conflicts with existing key (c1, (c2::circle))=(<(10,10),10>, <(0,0),5>).
+  -- succeed, because violation is ignored
+  INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+    ON CONFLICT ON CONSTRAINT circles_c1_c2_excl DO NOTHING;
+  -- fail, because DO UPDATE variant requires unique index
+  INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+    ON CONFLICT ON CONSTRAINT circles_c1_c2_excl DO UPDATE SET c2 = EXCLUDED.c2;
+! ERROR:  ON CONFLICT DO UPDATE not supported with exclusion constraints
+  -- succeed because c1 doesn't overlap
+  INSERT INTO circles VALUES('<(20,20), 1>', '<(0,0), 5>');
+  -- succeed because c2 doesn't overlap
+  INSERT INTO circles VALUES('<(20,20), 10>', '<(10,10), 5>');
+  -- should fail on existing data without the WHERE clause
+  ALTER TABLE circles ADD EXCLUDE USING gist
+    (c1 WITH &&, (c2::circle) WITH &&);
+! ERROR:  could not create exclusion constraint "circles_c1_c2_excl1"
+! DETAIL:  Key (c1, (c2::circle))=(<(0,0),5>, <(0,0),5>) conflicts with key (c1, (c2::circle))=(<(0,0),5>, <(0,0),4>).
+  -- try reindexing an existing constraint
+  REINDEX INDEX circles_c1_c2_excl;
+  DROP TABLE circles;
+  -- Check deferred exclusion constraint
+  CREATE TABLE deferred_excl (
+    f1 int,
+--- 603,659 ----
+      (c1 WITH &&, (c2::circle) WITH &&)
+      WHERE (circle_center(c1) <> '(0,0)')
+  );
++ ERROR:  invalid amproc number 3 for opclass 10074
+  -- these should succeed because they don't match the index predicate
+  INSERT INTO circles VALUES('<(0,0), 5>', '<(0,0), 5>');
++ ERROR:  relation "circles" does not exist
++ LINE 1: INSERT INTO circles VALUES('<(0,0), 5>', '<(0,0), 5>');
++                     ^
+  INSERT INTO circles VALUES('<(0,0), 5>', '<(0,0), 4>');
++ ERROR:  relation "circles" does not exist
++ LINE 1: INSERT INTO circles VALUES('<(0,0), 5>', '<(0,0), 4>');
++                     ^
+  -- succeed
+  INSERT INTO circles VALUES('<(10,10), 10>', '<(0,0), 5>');
++ ERROR:  relation "circles" does not exist
++ LINE 1: INSERT INTO circles VALUES('<(10,10), 10>', '<(0,0), 5>');
++                     ^
+  -- fail, overlaps
+  INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>');
+! ERROR:  relation "circles" does not exist
+! LINE 1: INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>');
+!                     ^
+  -- succeed, because violation is ignored
+  INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+    ON CONFLICT ON CONSTRAINT circles_c1_c2_excl DO NOTHING;
++ ERROR:  relation "circles" does not exist
++ LINE 1: INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
++                     ^
+  -- fail, because DO UPDATE variant requires unique index
+  INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+    ON CONFLICT ON CONSTRAINT circles_c1_c2_excl DO UPDATE SET c2 = EXCLUDED.c2;
+! ERROR:  relation "circles" does not exist
+! LINE 1: INSERT INTO circles VALUES('<(20,20), 10>', '<(0,0), 4>')
+!                     ^
+  -- succeed because c1 doesn't overlap
+  INSERT INTO circles VALUES('<(20,20), 1>', '<(0,0), 5>');
++ ERROR:  relation "circles" does not exist
++ LINE 1: INSERT INTO circles VALUES('<(20,20), 1>', '<(0,0), 5>');
++                     ^
+  -- succeed because c2 doesn't overlap
+  INSERT INTO circles VALUES('<(20,20), 10>', '<(10,10), 5>');
++ ERROR:  relation "circles" does not exist
++ LINE 1: INSERT INTO circles VALUES('<(20,20), 10>', '<(10,10), 5>');
++                     ^
+  -- should fail on existing data without the WHERE clause
+  ALTER TABLE circles ADD EXCLUDE USING gist
+    (c1 WITH &&, (c2::circle) WITH &&);
+! ERROR:  relation "circles" does not exist
+  -- try reindexing an existing constraint
+  REINDEX INDEX circles_c1_c2_excl;
++ ERROR:  relation "circles_c1_c2_excl" does not exist
+  DROP TABLE circles;
++ ERROR:  table "circles" does not exist
+  -- Check deferred exclusion constraint
+  CREATE TABLE deferred_excl (
+    f1 int,
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/inherit.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/inherit.out	2017-11-28 18:44:53.000000000 -0800
+***************
+*** 1141,1173 ****
+      c circle,
+      EXCLUDE USING gist (c WITH &&)
+  );
+  CREATE TABLE test_ex_constraints_inh () INHERITS (test_ex_constraints);
+  \d+ test_ex_constraints
+-                            Table "public.test_ex_constraints"
+-  Column |  Type  | Collation | Nullable | Default | Storage | Stats target | Description 
+- --------+--------+-----------+----------+---------+---------+--------------+-------------
+-  c      | circle |           |          |         | plain   |              | 
+- Indexes:
+-     "test_ex_constraints_c_excl" EXCLUDE USING gist (c WITH &&)
+- Child tables: test_ex_constraints_inh
+- 
+  ALTER TABLE test_ex_constraints DROP CONSTRAINT test_ex_constraints_c_excl;
+  \d+ test_ex_constraints
+-                            Table "public.test_ex_constraints"
+-  Column |  Type  | Collation | Nullable | Default | Storage | Stats target | Description 
+- --------+--------+-----------+----------+---------+---------+--------------+-------------
+-  c      | circle |           |          |         | plain   |              | 
+- Child tables: test_ex_constraints_inh
+- 
+  \d+ test_ex_constraints_inh
+-                          Table "public.test_ex_constraints_inh"
+-  Column |  Type  | Collation | Nullable | Default | Storage | Stats target | Description 
+- --------+--------+-----------+----------+---------+---------+--------------+-------------
+-  c      | circle |           |          |         | plain   |              | 
+- Inherits: test_ex_constraints
+- 
+  DROP TABLE test_ex_constraints_inh;
+  DROP TABLE test_ex_constraints;
+  -- Test non-inheritable foreign key constraints
+  CREATE TABLE test_primary_constraints(id int PRIMARY KEY);
+  CREATE TABLE test_foreign_constraints(id1 int REFERENCES test_primary_constraints(id));
+--- 1141,1158 ----
+      c circle,
+      EXCLUDE USING gist (c WITH &&)
+  );
++ ERROR:  invalid amproc number 3 for opclass 10074
+  CREATE TABLE test_ex_constraints_inh () INHERITS (test_ex_constraints);
++ ERROR:  relation "test_ex_constraints" does not exist
+  \d+ test_ex_constraints
+  ALTER TABLE test_ex_constraints DROP CONSTRAINT test_ex_constraints_c_excl;
++ ERROR:  relation "test_ex_constraints" does not exist
+  \d+ test_ex_constraints
+  \d+ test_ex_constraints_inh
+  DROP TABLE test_ex_constraints_inh;
++ ERROR:  table "test_ex_constraints_inh" does not exist
+  DROP TABLE test_ex_constraints;
++ ERROR:  table "test_ex_constraints" does not exist
+  -- Test non-inheritable foreign key constraints
+  CREATE TABLE test_primary_constraints(id int PRIMARY KEY);
+  CREATE TABLE test_foreign_constraints(id1 int REFERENCES test_primary_constraints(id));
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/create_am.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/create_am.out	2017-11-28 18:44:52.000000000 -0800
+***************
+*** 30,101 ****
+  	FUNCTION 5	gist_box_penalty(internal, internal, internal),
+  	FUNCTION 6	gist_box_picksplit(internal, internal),
+  	FUNCTION 7	gist_box_same(box, box, internal);
+  -- Create gist2 index on fast_emp4000
+  CREATE INDEX grect2ind2 ON fast_emp4000 USING gist2 (home_base);
+  -- Now check the results from plain indexscan; temporarily drop existing
+  -- index grect2ind to ensure it doesn't capture the plan
+  BEGIN;
+  DROP INDEX grect2ind;
+  SET enable_seqscan = OFF;
+  SET enable_indexscan = ON;
+  SET enable_bitmapscan = OFF;
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM fast_emp4000
+      WHERE home_base @ '(200,200),(2000,1000)'::box
+      ORDER BY (home_base[0])[0];
+!                            QUERY PLAN                           
+! ----------------------------------------------------------------
+!  Sort
+!    Sort Key: ((home_base[0])[0])
+!    ->  Index Only Scan using grect2ind2 on fast_emp4000
+!          Index Cond: (home_base @ '(2000,1000),(200,200)'::box)
+! (4 rows)
+! 
+  SELECT * FROM fast_emp4000
+      WHERE home_base @ '(200,200),(2000,1000)'::box
+      ORDER BY (home_base[0])[0];
+!        home_base       
+! -----------------------
+!  (337,455),(240,359)
+!  (1444,403),(1346,344)
+! (2 rows)
+! 
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+!                          QUERY PLAN                          
+! -------------------------------------------------------------
+!  Aggregate
+!    ->  Index Only Scan using grect2ind2 on fast_emp4000
+!          Index Cond: (home_base && '(1000,1000),(0,0)'::box)
+! (3 rows)
+! 
+  SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+!  count 
+! -------
+!      2
+! (1 row)
+! 
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+!                        QUERY PLAN                       
+! --------------------------------------------------------
+!  Aggregate
+!    ->  Index Only Scan using grect2ind2 on fast_emp4000
+!          Index Cond: (home_base IS NULL)
+! (3 rows)
+! 
+  SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+!  count 
+! -------
+!    278
+! (1 row)
+! 
+  ROLLBACK;
+  -- Try to drop access method: fail because of dependent objects
+  DROP ACCESS METHOD gist2;
+- ERROR:  cannot drop access method gist2 because other objects depend on it
+- DETAIL:  index grect2ind2 depends on operator class box_ops for access method gist2
+- HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+  -- Drop access method cascade
+  DROP ACCESS METHOD gist2 CASCADE;
+! NOTICE:  drop cascades to index grect2ind2
+--- 30,73 ----
+  	FUNCTION 5	gist_box_penalty(internal, internal, internal),
+  	FUNCTION 6	gist_box_picksplit(internal, internal),
+  	FUNCTION 7	gist_box_same(box, box, internal);
++ ERROR:  invalid operator number 6, must be between 1 and 5
+  -- Create gist2 index on fast_emp4000
+  CREATE INDEX grect2ind2 ON fast_emp4000 USING gist2 (home_base);
++ ERROR:  data type box has no default operator class for access method "gist2"
++ HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+  -- Now check the results from plain indexscan; temporarily drop existing
+  -- index grect2ind to ensure it doesn't capture the plan
+  BEGIN;
+  DROP INDEX grect2ind;
++ ERROR:  index "grect2ind" does not exist
+  SET enable_seqscan = OFF;
++ ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  SET enable_indexscan = ON;
++ ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  SET enable_bitmapscan = OFF;
++ ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  EXPLAIN (COSTS OFF)
+  SELECT * FROM fast_emp4000
+      WHERE home_base @ '(200,200),(2000,1000)'::box
+      ORDER BY (home_base[0])[0];
+! ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  SELECT * FROM fast_emp4000
+      WHERE home_base @ '(200,200),(2000,1000)'::box
+      ORDER BY (home_base[0])[0];
+! ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+! ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  SELECT count(*) FROM fast_emp4000 WHERE home_base && '(1000,1000,0,0)'::box;
+! ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  EXPLAIN (COSTS OFF)
+  SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+! ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
+! ERROR:  current transaction is aborted, commands ignored until end of transaction block
+  ROLLBACK;
+  -- Try to drop access method: fail because of dependent objects
+  DROP ACCESS METHOD gist2;
+  -- Drop access method cascade
+  DROP ACCESS METHOD gist2 CASCADE;
+! ERROR:  access method "gist2" does not exist
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/sanity_check.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/sanity_check.out	2017-11-28 18:44:53.000000000 -0800
+***************
+*** 30,36 ****
+  char_tbl|f
+  check2_tbl|f
+  check_tbl|f
+! circle_tbl|t
+  city|f
+  copy_tbl|f
+  d|f
+--- 30,36 ----
+  char_tbl|f
+  check2_tbl|f
+  check_tbl|f
+! circle_tbl|f
+  city|f
+  copy_tbl|f
+  d|f
+***************
+*** 44,50 ****
+  emp|f
+  equipment_r|f
+  f_star|f
+! fast_emp4000|t
+  float4_tbl|f
+  float8_tbl|f
+  func_index_heap|t
+--- 44,50 ----
+  emp|f
+  equipment_r|f
+  f_star|f
+! fast_emp4000|f
+  float4_tbl|f
+  float8_tbl|f
+  func_index_heap|t
+***************
+*** 162,169 ****
+  pg_ts_template|t
+  pg_type|t
+  pg_user_mapping|t
+! point_tbl|t
+! polygon_tbl|t
+  quad_box_tbl|t
+  quad_point_tbl|t
+  radix_text_tbl|t
+--- 162,169 ----
+  pg_ts_template|t
+  pg_type|t
+  pg_user_mapping|t
+! point_tbl|f
+! polygon_tbl|f
+  quad_box_tbl|t
+  quad_point_tbl|t
+  radix_text_tbl|t
+***************
+*** 184,191 ****
+  student|f
+  tenk1|t
+  tenk2|t
+! test_range_excl|t
+! test_range_gist|t
+  test_range_spgist|t
+  test_tsvector|f
+  testjsonb|f
+--- 184,190 ----
+  student|f
+  tenk1|t
+  tenk2|t
+! test_range_gist|f
+  test_range_spgist|t
+  test_tsvector|f
+  testjsonb|f
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/gist.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/gist.out	2017-11-28 18:44:55.000000000 -0800
+***************
+*** 5,19 ****
+  -- testing GiST code itself. Vacuuming in particular.
+  create table gist_point_tbl(id int4, p point);
+  create index gist_pointidx on gist_point_tbl using gist(p);
+  -- Verify the fillfactor and buffering options
+  create index gist_pointidx2 on gist_point_tbl using gist(p) with (buffering = on, fillfactor=50);
+  create index gist_pointidx3 on gist_point_tbl using gist(p) with (buffering = off);
+  create index gist_pointidx4 on gist_point_tbl using gist(p) with (buffering = auto);
+  drop index gist_pointidx2, gist_pointidx3, gist_pointidx4;
+  -- Make sure bad values are refused
+  create index gist_pointidx5 on gist_point_tbl using gist(p) with (buffering = invalid_value);
+! ERROR:  invalid value for "buffering" option
+! DETAIL:  Valid values are "on", "off", and "auto".
+  create index gist_pointidx5 on gist_point_tbl using gist(p) with (fillfactor=9);
+  ERROR:  value 9 out of bounds for option "fillfactor"
+  DETAIL:  Valid values are between "10" and "100".
+--- 5,23 ----
+  -- testing GiST code itself. Vacuuming in particular.
+  create table gist_point_tbl(id int4, p point);
+  create index gist_pointidx on gist_point_tbl using gist(p);
++ ERROR:  invalid amproc number 3 for opclass 10072
+  -- Verify the fillfactor and buffering options
+  create index gist_pointidx2 on gist_point_tbl using gist(p) with (buffering = on, fillfactor=50);
++ ERROR:  unrecognized parameter "buffering"
+  create index gist_pointidx3 on gist_point_tbl using gist(p) with (buffering = off);
++ ERROR:  unrecognized parameter "buffering"
+  create index gist_pointidx4 on gist_point_tbl using gist(p) with (buffering = auto);
++ ERROR:  unrecognized parameter "buffering"
+  drop index gist_pointidx2, gist_pointidx3, gist_pointidx4;
++ ERROR:  index "gist_pointidx2" does not exist
+  -- Make sure bad values are refused
+  create index gist_pointidx5 on gist_point_tbl using gist(p) with (buffering = invalid_value);
+! ERROR:  unrecognized parameter "buffering"
+  create index gist_pointidx5 on gist_point_tbl using gist(p) with (fillfactor=9);
+  ERROR:  value 9 out of bounds for option "fillfactor"
+  DETAIL:  Valid values are between "10" and "100".
+***************
+*** 34,40 ****
+--- 38,46 ----
+  vacuum analyze gist_point_tbl;
+  -- rebuild the index with a different fillfactor
+  alter index gist_pointidx SET (fillfactor = 40);
++ ERROR:  relation "gist_pointidx" does not exist
+  reindex index gist_pointidx;
++ ERROR:  relation "gist_pointidx" does not exist
+  --
+  -- Test Index-only plans on GiST indexes
+  --
+***************
+*** 50,62 ****
+  set enable_indexonlyscan=on;
+  -- Test index-only scan with point opclass
+  create index gist_tbl_point_index on gist_tbl using gist (p);
+  -- check that the planner chooses an index-only scan
+  explain (costs off)
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5));
+!                        QUERY PLAN                       
+! --------------------------------------------------------
+!  Index Only Scan using gist_tbl_point_index on gist_tbl
+!    Index Cond: (p <@ '(0.5,0.5),(0,0)'::box)
+  (2 rows)
+  
+  -- execute the same
+--- 56,69 ----
+  set enable_indexonlyscan=on;
+  -- Test index-only scan with point opclass
+  create index gist_tbl_point_index on gist_tbl using gist (p);
++ ERROR:  invalid amproc number 3 for opclass 10072
+  -- check that the planner chooses an index-only scan
+  explain (costs off)
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5));
+!                QUERY PLAN                
+! -----------------------------------------
+!  Seq Scan on gist_tbl
+!    Filter: (p <@ '(0.5,0.5),(0,0)'::box)
+  (2 rows)
+  
+  -- execute the same
+***************
+*** 80,91 ****
+  explain (costs off)
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5))
+  order by p <-> point(0.201, 0.201);
+!                        QUERY PLAN                       
+! --------------------------------------------------------
+!  Index Only Scan using gist_tbl_point_index on gist_tbl
+!    Index Cond: (p <@ '(0.5,0.5),(0,0)'::box)
+!    Order By: (p <-> '(0.201,0.201)'::point)
+! (3 rows)
+  
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5))
+  order by p <-> point(0.201, 0.201);
+--- 87,99 ----
+  explain (costs off)
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5))
+  order by p <-> point(0.201, 0.201);
+!                   QUERY PLAN                   
+! -----------------------------------------------
+!  Sort
+!    Sort Key: ((p <-> '(0.201,0.201)'::point))
+!    ->  Seq Scan on gist_tbl
+!          Filter: (p <@ '(0.5,0.5),(0,0)'::box)
+! (4 rows)
+  
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5))
+  order by p <-> point(0.201, 0.201);
+***************
+*** 108,119 ****
+  explain (costs off)
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5))
+  order by point(0.101, 0.101) <-> p;
+!                        QUERY PLAN                       
+! --------------------------------------------------------
+!  Index Only Scan using gist_tbl_point_index on gist_tbl
+!    Index Cond: (p <@ '(0.5,0.5),(0,0)'::box)
+!    Order By: (p <-> '(0.101,0.101)'::point)
+! (3 rows)
+  
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5))
+  order by point(0.101, 0.101) <-> p;
+--- 116,128 ----
+  explain (costs off)
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5))
+  order by point(0.101, 0.101) <-> p;
+!                   QUERY PLAN                   
+! -----------------------------------------------
+!  Sort
+!    Sort Key: (('(0.101,0.101)'::point <-> p))
+!    ->  Seq Scan on gist_tbl
+!          Filter: (p <@ '(0.5,0.5),(0,0)'::box)
+! (4 rows)
+  
+  select p from gist_tbl where p <@ box(point(0,0), point(0.5, 0.5))
+  order by point(0.101, 0.101) <-> p;
+***************
+*** 145,154 ****
+   Nested Loop
+     ->  Values Scan on "*VALUES*"
+     ->  Limit
+!          ->  Index Only Scan using gist_tbl_point_index on gist_tbl
+!                Index Cond: (p <@ "*VALUES*".column1)
+!                Order By: (p <-> ("*VALUES*".column1)[0])
+! (6 rows)
+  
+  select p from
+    (values (box(point(0,0), point(0.5,0.5))),
+--- 154,164 ----
+   Nested Loop
+     ->  Values Scan on "*VALUES*"
+     ->  Limit
+!          ->  Sort
+!                Sort Key: ((gist_tbl.p <-> ("*VALUES*".column1)[0]))
+!                ->  Seq Scan on gist_tbl
+!                      Filter: (p <@ "*VALUES*".column1)
+! (7 rows)
+  
+  select p from
+    (values (box(point(0,0), point(0.5,0.5))),
+***************
+*** 167,181 ****
+  (6 rows)
+  
+  drop index gist_tbl_point_index;
+  -- Test index-only scan with box opclass
+  create index gist_tbl_box_index on gist_tbl using gist (b);
+  -- check that the planner chooses an index-only scan
+  explain (costs off)
+  select b from gist_tbl where b <@ box(point(5,5), point(6,6));
+!                       QUERY PLAN                      
+! ------------------------------------------------------
+!  Index Only Scan using gist_tbl_box_index on gist_tbl
+!    Index Cond: (b <@ '(6,6),(5,5)'::box)
+  (2 rows)
+  
+  -- execute the same
+--- 177,193 ----
+  (6 rows)
+  
+  drop index gist_tbl_point_index;
++ ERROR:  index "gist_tbl_point_index" does not exist
+  -- Test index-only scan with box opclass
+  create index gist_tbl_box_index on gist_tbl using gist (b);
++ ERROR:  invalid amproc number 5 for opclass 10071
+  -- check that the planner chooses an index-only scan
+  explain (costs off)
+  select b from gist_tbl where b <@ box(point(5,5), point(6,6));
+!              QUERY PLAN              
+! -------------------------------------
+!  Seq Scan on gist_tbl
+!    Filter: (b <@ '(6,6),(5,5)'::box)
+  (2 rows)
+  
+  -- execute the same
+***************
+*** 206,221 ****
+  (21 rows)
+  
+  drop index gist_tbl_box_index;
+  -- Test that an index-only scan is not chosen, when the query involves the
+  -- circle column (the circle opclass does not support index-only scans).
+  create index gist_tbl_multi_index on gist_tbl using gist (p, c);
+  explain (costs off)
+  select p, c from gist_tbl
+  where p <@ box(point(5,5), point(6, 6));
+!                     QUERY PLAN                     
+! ---------------------------------------------------
+!  Index Scan using gist_tbl_multi_index on gist_tbl
+!    Index Cond: (p <@ '(6,6),(5,5)'::box)
+  (2 rows)
+  
+  -- execute the same
+--- 218,235 ----
+  (21 rows)
+  
+  drop index gist_tbl_box_index;
++ ERROR:  index "gist_tbl_box_index" does not exist
+  -- Test that an index-only scan is not chosen, when the query involves the
+  -- circle column (the circle opclass does not support index-only scans).
+  create index gist_tbl_multi_index on gist_tbl using gist (p, c);
++ ERROR:  invalid amproc number 3 for opclass 10072
+  explain (costs off)
+  select p, c from gist_tbl
+  where p <@ box(point(5,5), point(6, 6));
+!              QUERY PLAN              
+! -------------------------------------
+!  Seq Scan on gist_tbl
+!    Filter: (p <@ '(6,6),(5,5)'::box)
+  (2 rows)
+  
+  -- execute the same
+***************
+*** 238,243 ****
+--- 252,258 ----
+  (11 rows)
+  
+  drop index gist_tbl_multi_index;
++ ERROR:  index "gist_tbl_multi_index" does not exist
+  -- Clean up
+  reset enable_seqscan;
+  reset enable_bitmapscan;
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/alter_generic.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/alter_generic.out	2017-11-28 18:44:56.000000000 -0800
+***************
+*** 396,401 ****
+--- 396,402 ----
+  -- Should work. Textbook case of ALTER OPERATOR FAMILY ... ADD OPERATOR with FOR ORDER BY
+  CREATE OPERATOR FAMILY alt_opf9 USING gist;
+  ALTER OPERATOR FAMILY alt_opf9 USING gist ADD OPERATOR 1 < (int4, int4) FOR ORDER BY float_ops;
++ ERROR:  access method "gist" does not support ordering operators
+  DROP OPERATOR FAMILY alt_opf9 USING gist;
+  -- Should fail. Ensure correct ordering methods in ALTER OPERATOR FAMILY ... ADD OPERATOR .. FOR ORDER BY
+  CREATE OPERATOR FAMILY alt_opf10 USING btree;
+***************
+*** 405,411 ****
+--- 406,414 ----
+  -- Should work. Textbook case of ALTER OPERATOR FAMILY ... ADD OPERATOR with FOR ORDER BY
+  CREATE OPERATOR FAMILY alt_opf11 USING gist;
+  ALTER OPERATOR FAMILY alt_opf11 USING gist ADD OPERATOR 1 < (int4, int4) FOR ORDER BY float_ops;
++ ERROR:  access method "gist" does not support ordering operators
+  ALTER OPERATOR FAMILY alt_opf11 USING gist DROP OPERATOR 1 (int4, int4);
++ ERROR:  operator 1(integer,integer) does not exist in operator family "alt_opf11"
+  DROP OPERATOR FAMILY alt_opf11 USING gist;
+  -- Should fail. btree comparison functions should return INTEGER in ALTER OPERATOR FAMILY ... ADD FUNCTION
+  BEGIN TRANSACTION;
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/amutils.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/amutils.out	2017-11-28 18:44:57.000000000 -0800
+***************
+*** 55,82 ****
+           with ordinality as u(prop,ord)
+   where a.amname = 'gist'
+   order by ord;
+!         prop        | AM | Index | Column 
+! --------------------+----+-------+--------
+!  asc                |    |       | f
+!  desc               |    |       | f
+!  nulls_first        |    |       | f
+!  nulls_last         |    |       | f
+!  orderable          |    |       | f
+!  distance_orderable |    |       | t
+!  returnable         |    |       | f
+!  search_array       |    |       | f
+!  search_nulls       |    |       | t
+!  clusterable        |    | t     | 
+!  index_scan         |    | t     | 
+!  bitmap_scan        |    | t     | 
+!  backward_scan      |    | f     | 
+!  can_order          | f  |       | 
+!  can_unique         | f  |       | 
+!  can_multi_col      | t  |       | 
+!  can_exclude        | t  |       | 
+!  bogus              |    |       | 
+! (18 rows)
+! 
+  select prop,
+         pg_index_column_has_property('onek_hundred'::regclass, 1, prop) as btree,
+         pg_index_column_has_property('hash_i4_index'::regclass, 1, prop) as hash,
+--- 55,63 ----
+           with ordinality as u(prop,ord)
+   where a.amname = 'gist'
+   order by ord;
+! ERROR:  relation "gcircleind" does not exist
+! LINE 3:        pg_index_has_property('gcircleind'::regclass, prop) a...
+!                                      ^
+  select prop,
+         pg_index_column_has_property('onek_hundred'::regclass, 1, prop) as btree,
+         pg_index_column_has_property('hash_i4_index'::regclass, 1, prop) as hash,
+***************
+*** 90,109 ****
+                      'bogus']::text[])
+           with ordinality as u(prop,ord)
+   order by ord;
+!         prop        | btree | hash | gist | spgist | gin | brin 
+! --------------------+-------+------+------+--------+-----+------
+!  asc                | t     | f    | f    | f      | f   | f
+!  desc               | f     | f    | f    | f      | f   | f
+!  nulls_first        | f     | f    | f    | f      | f   | f
+!  nulls_last         | t     | f    | f    | f      | f   | f
+!  orderable          | t     | f    | f    | f      | f   | f
+!  distance_orderable | f     | f    | t    | f      | f   | f
+!  returnable         | t     | f    | f    | t      | f   | f
+!  search_array       | t     | f    | f    | f      | f   | f
+!  search_nulls       | t     | f    | t    | t      | f   | t
+!  bogus              |       |      |      |        |     | 
+! (10 rows)
+! 
+  select prop,
+         pg_index_has_property('onek_hundred'::regclass, prop) as btree,
+         pg_index_has_property('hash_i4_index'::regclass, prop) as hash,
+--- 71,79 ----
+                      'bogus']::text[])
+           with ordinality as u(prop,ord)
+   order by ord;
+! ERROR:  relation "gcircleind" does not exist
+! LINE 4:        pg_index_column_has_property('gcircleind'::regclass, ...
+!                                             ^
+  select prop,
+         pg_index_has_property('onek_hundred'::regclass, prop) as btree,
+         pg_index_has_property('hash_i4_index'::regclass, prop) as hash,
+***************
+*** 116,130 ****
+                      'bogus']::text[])
+           with ordinality as u(prop,ord)
+   order by ord;
+!      prop      | btree | hash | gist | spgist | gin | brin 
+! ---------------+-------+------+------+--------+-----+------
+!  clusterable   | t     | f    | t    | f      | f   | f
+!  index_scan    | t     | t    | t    | t      | f   | f
+!  bitmap_scan   | t     | t    | t    | t      | t   | t
+!  backward_scan | t     | t    | f    | f      | f   | f
+!  bogus         |       |      |      |        |     | 
+! (5 rows)
+! 
+  select amname, prop, pg_indexam_has_property(a.oid, prop) as p
+    from pg_am a,
+         unnest(array['can_order', 'can_unique', 'can_multi_col',
+--- 86,94 ----
+                      'bogus']::text[])
+           with ordinality as u(prop,ord)
+   order by ord;
+! ERROR:  relation "gcircleind" does not exist
+! LINE 4:        pg_index_has_property('gcircleind'::regclass, prop) a...
+!                                      ^
+  select amname, prop, pg_indexam_has_property(a.oid, prop) as p
+    from pg_am a,
+         unnest(array['can_order', 'can_unique', 'can_multi_col',
+***************
+*** 149,156 ****
+   gin    | can_multi_col | t
+   gin    | can_exclude   | f
+   gin    | bogus         | 
+!  gist   | can_order     | f
+!  gist   | can_unique    | f
+   gist   | can_multi_col | t
+   gist   | can_exclude   | t
+   gist   | bogus         | 
+--- 113,120 ----
+   gin    | can_multi_col | t
+   gin    | can_exclude   | f
+   gin    | bogus         | 
+!  gist   | can_order     | t
+!  gist   | can_unique    | t
+   gist   | can_multi_col | t
+   gist   | can_exclude   | t
+   gist   | bogus         | 
+
+======================================================================
+
+*** /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/expected/tsearch.out	2017-10-26 12:50:12.000000000 -0700
+--- /Users/andrewadriance/Documents/GitHub/postgres/src/test/regress/results/tsearch.out	2017-11-28 18:44:59.000000000 -0800
+***************
+*** 117,131 ****
+  (1 row)
+  
+  create index wowidx on test_tsvector using gist (a);
+  SET enable_seqscan=OFF;
+  SET enable_indexscan=ON;
+  SET enable_bitmapscan=OFF;
+  explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+!                       QUERY PLAN                       
+! -------------------------------------------------------
+   Aggregate
+!    ->  Index Scan using wowidx on test_tsvector
+!          Index Cond: (a @@ '''wr'' | ''qh'''::tsquery)
+  (3 rows)
+  
+  SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+--- 117,132 ----
+  (1 row)
+  
+  create index wowidx on test_tsvector using gist (a);
++ ERROR:  invalid amproc number 3 for opclass 10083
+  SET enable_seqscan=OFF;
+  SET enable_indexscan=ON;
+  SET enable_bitmapscan=OFF;
+  explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+!                     QUERY PLAN                     
+! ---------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on test_tsvector
+!          Filter: (a @@ '''wr'' | ''qh'''::tsquery)
+  (3 rows)
+  
+  SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+***************
+*** 191,204 ****
+  SET enable_indexscan=OFF;
+  SET enable_bitmapscan=ON;
+  explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+!                          QUERY PLAN                          
+! -------------------------------------------------------------
+   Aggregate
+!    ->  Bitmap Heap Scan on test_tsvector
+!          Recheck Cond: (a @@ '''wr'' | ''qh'''::tsquery)
+!          ->  Bitmap Index Scan on wowidx
+!                Index Cond: (a @@ '''wr'' | ''qh'''::tsquery)
+! (5 rows)
+  
+  SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+   count 
+--- 192,203 ----
+  SET enable_indexscan=OFF;
+  SET enable_bitmapscan=ON;
+  explain (costs off) SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+!                     QUERY PLAN                     
+! ---------------------------------------------------
+   Aggregate
+!    ->  Seq Scan on test_tsvector
+!          Filter: (a @@ '''wr'' | ''qh'''::tsquery)
+! (3 rows)
+  
+  SELECT count(*) FROM test_tsvector WHERE a @@ 'wr|qh';
+   count 
+***************
+*** 264,269 ****
+--- 263,269 ----
+  RESET enable_indexscan;
+  RESET enable_bitmapscan;
+  DROP INDEX wowidx;
++ ERROR:  index "wowidx" does not exist
+  CREATE INDEX wowidx ON test_tsvector USING gin (a);
+  SET enable_seqscan=OFF;
+  -- GIN only supports bitmapscan, so no need to test plain indexscan
+***************
+*** 1474,1479 ****
+--- 1474,1480 ----
+  (1 row)
+  
+  CREATE INDEX qq ON test_tsquery USING gist (keyword tsquery_ops);
++ ERROR:  invalid amproc number 3 for opclass 10086
+  SET enable_seqscan=OFF;
+  SELECT keyword FROM test_tsquery WHERE keyword @> 'new';
+      keyword     
+
+======================================================================
+
